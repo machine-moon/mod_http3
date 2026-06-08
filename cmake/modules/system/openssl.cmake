@@ -1,4 +1,4 @@
-# -- OpenSSL v3.5.0 --
+# -- OpenSSL v3.5.0+ --
 
 if(TARGET openssl)
   return()
@@ -95,17 +95,24 @@ if(BUILD_SSL)
 
   set(OPENSSL_ROOT_DIR "${OPENSSL_OUTPUT_DIRECTORY}")
   set(OpenSSL_DIR "${OPENSSL_OUTPUT_DIRECTORY}/lib64/cmake/OpenSSL")
-  find_package(OpenSSL ${OPENSSL_VERSION_MIN} REQUIRED QUIET COMPONENTS Crypto SSL PATHS "${OPENSSL_OUTPUT_DIRECTORY}" NO_DEFAULT_PATH)
+  find_package(OpenSSL REQUIRED QUIET COMPONENTS Crypto SSL PATHS "${OPENSSL_OUTPUT_DIRECTORY}" NO_DEFAULT_PATH)
 elseif(WITH_SSL)
-  find_package(OpenSSL ${OPENSSL_VERSION_MIN} QUIET COMPONENTS Crypto SSL PATHS "${WITH_SSL}" NO_DEFAULT_PATH)
+  find_package(OpenSSL QUIET COMPONENTS Crypto SSL PATHS "${WITH_SSL}" NO_DEFAULT_PATH)
   if(NOT OpenSSL_FOUND)
     message(FATAL_ERROR
-        "[openssl] error: >= ${OPENSSL_VERSION_MIN} not found at WITH_SSL=${WITH_SSL}."
+        "[openssl] error: OpenSSL not found at WITH_SSL=${WITH_SSL}."
     )
   endif()
 else()
   message(FATAL_ERROR
       "[openssl] error: set BUILD_SSL=ON to build from source or provide WITH_SSL=/path/to/openssl."
+  )
+endif()
+
+# Verify version is >= 3.5.0
+if(OPENSSL_VERSION VERSION_LESS OPENSSL_VERSION_MIN)
+  message(FATAL_ERROR
+      "[openssl] error: found version ${OPENSSL_VERSION} but require >= ${OPENSSL_VERSION_MIN}."
   )
 endif()
 
