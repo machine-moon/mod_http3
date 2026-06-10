@@ -1,6 +1,6 @@
 # Dependencies
 
-mod_http3 uses **git submodules** for all dependencies. The `BUILD_SSL` and `BUILD_HTTPD` CMake options control whether they are built from source or found on the system.
+mod_http3 uses **git submodules** for all dependencies. By default, all dependencies are built from source at configure time. Provide `WITH_*` CMake variables to override with system-installed versions.
 
 ---
 
@@ -44,7 +44,7 @@ mod_http3 uses APR bucket types (`AP_BUCKET_IS_RESPONSE`, etc.) that were introd
 
 ## Dependency resolution modes
 
-### Mode 1 -- Build from source (`BUILD_SSL=ON`, `BUILD_HTTPD=ON`)
+### Default -- Build from source
 
 CMake builds OpenSSL, APR, APR-util, and httpd from their respective git submodules at **configure time**, installing each into `dependencies/<dep>-dist/`. A small marker file (`dependencies/<dep>-dist/.done`) is used to skip rebuilding dependencies that are already up to date.
 
@@ -55,7 +55,7 @@ CMake builds OpenSSL, APR, APR-util, and httpd from their respective git submodu
 4. httpd (`dependencies/httpd`) -> `dependencies/httpd-dist/`
 
 ```sh
-# default to build from source (first configure is slow; subsequent ones are instant from cache)
+# default: builds all dependencies from source (first configure is slow; subsequent ones are instant from cache)
 cmake -B build
 cmake --build build -j$(nproc)
 ```
@@ -65,42 +65,52 @@ This is the recommended mode for development. Everything is self-contained under
 **To force a clean rebuild of a dependency built from source**, delete its `-dist` dir and re-configure:
 
 ```sh
-rm dependencies/openssl-dist/   # re-build OpenSSL
-rm dependencies/httpd-dist/     # re-build httpd
-cmake --build build
+rm -rf dependencies/openssl-dist   # re-build OpenSSL
+rm -rf dependencies/httpd-dist     # re-build httpd
+cmake -B build
 ```
 
 ---
 
-### Mode 2 -- System packages (`BUILD_SSL=OFF`, `BUILD_HTTPD=OFF`)
+### Override with system packages (`WITH_*` variables)
 
-CMake uses `WITH_SSL=/path/to/openssl` and `WITH_HTTPD=/path/to/httpd` to locate system-installed dependencies. All must satisfy the minimum versions.
+Provide `WITH_*` paths to use system-installed dependencies instead of building from source. Each `WITH_*` variable overrides the corresponding source build.
 
-**Minimum requirements checked at configure time:**
+| Variable | Overrides | Minimum |
+|---|---|---|
+| `WITH_SSL=/path` | OpenSSL source build | >= 3.5.0 |
+| `WITH_HTTPD=/path` | httpd source build (includes APR/APU resolution via apxs) | MMN >= 20211221 |
+| `WITH_APR=/path` | APR source build | >= 1.7.0 |
+| `WITH_APU=/path` | APR-util source build | >= 1.6.0 |
 
-| Tool / package | Minimum required |
-|----------------|-----------------|
-| OpenSSL        | ≥ 3.5.0         |
-| httpd (via apxs) | ≥ 2.4.x AND MMN ≥ 20211221 |
-| APR            | ≥ 1.7.0         |
-| APU            | ≥ 1.6.0         |
+```sh
+cmake -B build -DWITH_SSL=/opt/openssl -DWITH_HTTPD=/opt/httpd
+cmake --build build -j$(nproc)
+```
 
-> **OS package caveat:** System httpd packages (Ubuntu, Fedora, etc.) ship the 2.4.x AP24 generation (MMN < 20211221). CMake will `FATAL_ERROR` on the MMN check. Use build-from-source mode or a custom PATH install instead.
+If APR and APR-util are installed separately from httpd:
+
+```sh
+cmake -B build -DWITH_SSL=/opt/openssl -DWITH_HTTPD=/opt/httpd -DWITH_APR=/opt/apr -DWITH_APU=/opt/apr-util
+cmake --build build -j$(nproc)
+```
+
+> **OS package caveat:** System httpd packages (Ubuntu, Fedora, etc.) ship the 2.4.x AP24 generation (MMN < 20211221). CMake will `FATAL_ERROR` on the MMN check. Use build-from-source mode or a custom prefix install instead.
 
 ---
 
-### Mixed mode (`BUILD_SSL=ON`, `BUILD_HTTPD=OFF` or vice versa)
+### Mixed mode
 
-You can mix building from source and system dependencies. For example, build OpenSSL from source but use a system httpd:
+You can override individual dependencies while building the rest from source. For example, use system OpenSSL but build httpd from source:
 
 ```sh
-cmake -B build -DBUILD_SSL=ON -DBUILD_HTTPD=OFF -DWITH_HTTPD=/opt/httpd
+cmake -B build -DWITH_SSL=/opt/openssl
 ```
 
-Or use system OpenSSL but build httpd from source:
+Or build OpenSSL from source but use a system httpd:
 
 ```sh
-cmake -B build -DBUILD_SSL=OFF -DBUILD_HTTPD=ON -DWITH_SSL=/opt/openssl
+cmake -B build -DWITH_HTTPD=/opt/httpd
 ```
 
 ---

@@ -4,7 +4,13 @@
   Build
   -----
 
-  Provide your OpenSSL and httpd paths:
+  Default build compiles all dependencies from submodules:
+
+     $ git submodule update --init --recursive
+     $ cmake -B build
+     $ cmake --build build -j$(nproc)
+
+  To use system-installed dependencies, provide WITH_* paths:
 
      $ git submodule update --init dependencies/nghttp3
      $ cmake -B build \
@@ -23,14 +29,6 @@
          -DWITH_APU=/opt/apr-util \
          -DBUILD_EXAMPLES=OFF \
          -DBUILD_TESTS=OFF
-     $ cmake --build build -j$(nproc)
-
-  If you need to build dependencies from source:
-
-     $ git submodule update --init \
-         dependencies/openssl dependencies/httpd \
-         dependencies/apr dependencies/apr-util
-     $ cmake -B build -DBUILD_SSL=ON -DBUILD_HTTPD=ON
      $ cmake --build build -j$(nproc)
 
   To enable tests, you'll need googletest:
@@ -52,8 +50,8 @@
      APU      >= 1.6.0
 
   NOTE: Distro-packaged httpd (Ubuntu, Fedora, etc.) ships with an
-  older MMN and will be rejected. Use BUILD_HTTPD=ON or a custom
-  prefix install instead.
+  older MMN and will be rejected. Use the default source build or
+  provide a custom prefix install via WITH_HTTPD instead.
 
 
   Install

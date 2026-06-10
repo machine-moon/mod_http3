@@ -6,18 +6,20 @@ Status: **experimental**.
 
 ## Build
 
+Default build compiles all dependencies (OpenSSL, APR, APR-util, httpd) from submodules:
+
 ```sh
-cmake -B build -DWITH_SSL=/opt/openssl -DWITH_HTTPD=/opt/httpd
+git submodule update --init --recursive
+cmake -B build
 cmake --build build -j$(nproc)
 ```
 
 Output: `build/lib/mod_http3.so`
 
-If you don't have OpenSSL >= 3.5.0 or httpd with MMN >= 20211221:
+To use system-installed dependencies instead, provide `WITH_*` paths:
 
 ```sh
-git submodule update --init dependencies/openssl dependencies/httpd dependencies/apr dependencies/apr-util
-cmake -B build -DBUILD_SSL=ON -DBUILD_HTTPD=ON
+cmake -B build -DWITH_SSL=/opt/openssl -DWITH_HTTPD=/opt/httpd
 cmake --build build -j$(nproc)
 ```
 
@@ -31,12 +33,10 @@ See [INSTALL](INSTALL) for full build instructions.
 | `BUILD_MODULE` | `ON` | Build `mod_http3.so` |
 | `BUILD_EXAMPLES` | `ON` | Build example programs |
 | `BUILD_TESTS` | `ON` | Build test suite |
-| `BUILD_SSL` | `OFF` | Build OpenSSL from source |
-| `BUILD_HTTPD` | `OFF` | Build httpd from source |
-| `WITH_SSL` | (empty) | Path to OpenSSL prefix |
-| `WITH_HTTPD` | (empty) | Path to httpd prefix |
-| `WITH_APR` | (empty) | Path to APR prefix |
-| `WITH_APU` | (empty) | Path to APR-util prefix |
+| `WITH_SSL` | (empty) | Path to OpenSSL prefix (overrides source build) |
+| `WITH_HTTPD` | (empty) | Path to httpd prefix (overrides source build) |
+| `WITH_APR` | (empty) | Path to APR prefix (overrides source build) |
+| `WITH_APU` | (empty) | Path to APR-util prefix (overrides source build) |
 | `ENABLE_ASAN` | `OFF` | Address Sanitizer (requires `Debug`) |
 | `ENABLE_UBSAN` | `OFF` | UB Sanitizer (requires `Debug`) |
 | `ENABLE_WERROR` | `OFF` | Treat warnings as errors |
