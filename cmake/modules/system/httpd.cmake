@@ -15,8 +15,14 @@ set(HTTPD_MMN_MIN "20211221")
 
 # -- Find apxs config tool --
 
-if(BUILD_HTTPD)
-
+if(WITH_HTTPD)
+  find_program(APXS_EXECUTABLE NAMES apxs apxs2 HINTS "${WITH_HTTPD}/bin" NO_DEFAULT_PATH NO_CACHE)
+  if(NOT APXS_EXECUTABLE)
+    message(FATAL_ERROR
+        "[httpd] error: apxs not found at WITH_HTTPD=${WITH_HTTPD}."
+    )
+  endif()
+else()
   # httpd depends on openssl
   require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/openssl")
   if(BUILD_SSL)
@@ -136,17 +142,6 @@ if(BUILD_HTTPD)
     NAMES apxs apxs2
     HINTS "${HTTPD_OUTPUT_DIRECTORY}/bin"
     NO_DEFAULT_PATH REQUIRED NO_CACHE)
-elseif(WITH_HTTPD)
-  find_program(APXS_EXECUTABLE NAMES apxs apxs2 HINTS "${WITH_HTTPD}/bin" NO_DEFAULT_PATH NO_CACHE)
-  if(NOT APXS_EXECUTABLE)
-    message(FATAL_ERROR
-        "[httpd] error: apxs not found at WITH_HTTPD=${WITH_HTTPD}."
-    )
-  endif()
-else()
-  message(FATAL_ERROR
-      "[httpd] error: set BUILD_HTTPD=ON to build from source or provide WITH_HTTPD=/path/to/httpd."
-  )
 endif()
 
 # -- Extract httpd information --

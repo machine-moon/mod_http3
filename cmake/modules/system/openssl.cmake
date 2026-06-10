@@ -9,8 +9,14 @@ set(OPENSSL_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/openssl-dist")
 
 set(OPENSSL_VERSION_MIN "3.5.0")
 
-if(BUILD_SSL)
-
+if(WITH_SSL)
+  find_package(OpenSSL QUIET COMPONENTS Crypto SSL PATHS "${WITH_SSL}" NO_DEFAULT_PATH)
+  if(NOT OpenSSL_FOUND)
+    message(FATAL_ERROR
+        "[openssl] error: OpenSSL not found at WITH_SSL=${WITH_SSL}."
+    )
+  endif()
+else()
   # Build OpenSSL from source if not already done
   if(NOT EXISTS "${OPENSSL_OUTPUT_DIRECTORY}/.done")
     require_initialized_submodule("${OPENSSL_DIRECTORY}")
@@ -96,17 +102,6 @@ if(BUILD_SSL)
   set(OPENSSL_ROOT_DIR "${OPENSSL_OUTPUT_DIRECTORY}")
   set(OpenSSL_DIR "${OPENSSL_OUTPUT_DIRECTORY}/lib64/cmake/OpenSSL")
   find_package(OpenSSL REQUIRED QUIET COMPONENTS Crypto SSL PATHS "${OPENSSL_OUTPUT_DIRECTORY}" NO_DEFAULT_PATH)
-elseif(WITH_SSL)
-  find_package(OpenSSL QUIET COMPONENTS Crypto SSL PATHS "${WITH_SSL}" NO_DEFAULT_PATH)
-  if(NOT OpenSSL_FOUND)
-    message(FATAL_ERROR
-        "[openssl] error: OpenSSL not found at WITH_SSL=${WITH_SSL}."
-    )
-  endif()
-else()
-  message(FATAL_ERROR
-      "[openssl] error: set BUILD_SSL=ON to build from source or provide WITH_SSL=/path/to/openssl."
-  )
 endif()
 
 # Verify version is >= 3.5.0
