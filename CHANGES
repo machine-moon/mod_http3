@@ -3,6 +3,21 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.13 (2026-06-10)
+--------------------
+
+  *) Updated documentation for implicit build model and WITH_* overrides.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Changed dependency resolution to implicit source build, removed
+     BUILD_SSL/BUILD_HTTPD options, aggregated module output paths for
+     CMake summary. Dependencies overridden by WITH_SSL/WITH_HTTPD/
+     WITH_APR/WITH_APU/WITH_NGHTTP3 when provided.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Added WITH_NGHTTP3, detect APR/APR-util from apxs, and allow OpenSSL >= 3.5.0.
+     [Jean-Frederic Clere <jfclere apache.org> <jfclere gmail.com>]
+
 v0.0.12 (2026-06-08)
 --------------------
   *) Added WITH_APR and WITH_APU CMake variables for independent
