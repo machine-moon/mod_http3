@@ -17,8 +17,6 @@ COPY mod_http3/ mod_http3/
 
 RUN cmake -B build \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_SSL=ON \
-    -DBUILD_HTTPD=ON \
     -DBUILD_MODULE=ON \
     -DBUILD_EXAMPLES=OFF \
     -DBUILD_TESTS=OFF \

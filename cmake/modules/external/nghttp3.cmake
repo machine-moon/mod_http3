@@ -4,9 +4,6 @@ if(TARGET nghttp3)
   return()
 endif()
 
-set(NGHTTP3_DIRECTORY "${DEPENDENCIES_DIRECTORY}/nghttp3")
-set(NGHTTP3_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/nghttp3-dist")
-
 if(WITH_NGHTTP3)
   # Use external nghttp3 installation
   find_library(NGHTTP3_LIBRARY NAMES nghttp3 libnghttp3 HINTS "${WITH_NGHTTP3}/lib" "${WITH_NGHTTP3}/lib64" NO_DEFAULT_PATH)
@@ -25,8 +22,13 @@ if(WITH_NGHTTP3)
   add_library(nghttp3 INTERFACE)
   target_include_directories(nghttp3 SYSTEM INTERFACE "${NGHTTP3_INCLUDE_DIR}")
   target_link_libraries(nghttp3 INTERFACE "${NGHTTP3_LIBRARY}")
+  set(NGHTTP3_OUTPUT_DIRECTORY "${WITH_NGHTTP3}")
 else()
-  # Build nghttp3 from source
+  
+  set(NGHTTP3_DIRECTORY "${DEPENDENCIES_DIRECTORY}/nghttp3")
+  set(NGHTTP3_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/nghttp3-dist")
+
+# Build nghttp3 from source
   require_initialized_submodule("${NGHTTP3_DIRECTORY}")
   require_initialized_submodule("${NGHTTP3_DIRECTORY}/lib/sfparse")
 

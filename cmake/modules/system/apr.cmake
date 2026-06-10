@@ -4,9 +4,6 @@ if(TARGET apr)
   return()
 endif()
 
-set(APR_DIRECTORY "${DEPENDENCIES_DIRECTORY}/apr")
-set(APR_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/apr-dist")
-
 set(APR_VERSION_MIN "1.7.0")
 
 # -- Find APR config tool --
@@ -18,6 +15,7 @@ if(WITH_APR)
         "[apr] error: apr-config not found at WITH_APR=${WITH_APR}."
     )
   endif()
+  set(APR_OUTPUT_DIRECTORY "${WITH_APR}")
 elseif(WITH_HTTPD)
   # Query apxs to find APR location
   find_program(_APXS_EXECUTABLE NAMES apxs apxs2 HINTS "${WITH_HTTPD}/bin" NO_DEFAULT_PATH NO_CACHE)
@@ -48,7 +46,11 @@ elseif(WITH_HTTPD)
         "[apr] error: apr-config not found at APR_BINDIR=${_APR_BINDIR} (queried from apxs)."
     )
   endif()
+  set(APR_OUTPUT_DIRECTORY "${_APR_BINDIR}")
 else()
+
+  set(APR_DIRECTORY "${DEPENDENCIES_DIRECTORY}/apr")
+  set(APR_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/apr-dist")
 
   # Build apr from source if not already done
   if(NOT EXISTS "${APR_OUTPUT_DIRECTORY}/.done")

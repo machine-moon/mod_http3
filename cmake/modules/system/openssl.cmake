@@ -4,9 +4,6 @@ if(TARGET openssl)
   return()
 endif()
 
-set(OPENSSL_DIRECTORY "${DEPENDENCIES_DIRECTORY}/openssl")
-set(OPENSSL_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/openssl-dist")
-
 set(OPENSSL_VERSION_MIN "3.5.0")
 
 if(WITH_SSL)
@@ -16,7 +13,12 @@ if(WITH_SSL)
         "[openssl] error: OpenSSL not found at WITH_SSL=${WITH_SSL}."
     )
   endif()
+  set(OPENSSL_OUTPUT_DIRECTORY "${WITH_SSL}")
 else()
+
+  set(OPENSSL_DIRECTORY "${DEPENDENCIES_DIRECTORY}/openssl")
+  set(OPENSSL_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/openssl-dist")
+
   # Build OpenSSL from source if not already done
   if(NOT EXISTS "${OPENSSL_OUTPUT_DIRECTORY}/.done")
     require_initialized_submodule("${OPENSSL_DIRECTORY}")

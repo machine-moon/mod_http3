@@ -4,9 +4,6 @@ if(TARGET apu)
   return()
 endif()
 
-set(APU_DIRECTORY "${DEPENDENCIES_DIRECTORY}/apr-util")
-set(APU_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/apr-util-dist")
-
 set(APU_VERSION_MIN "1.6.0")
 
 # -- Find APU config tool --
@@ -18,6 +15,7 @@ if(WITH_APU)
         "[apu] error: apu-config not found at WITH_APU=${WITH_APU}."
     )
   endif()
+  set(APU_OUTPUT_DIRECTORY "${WITH_APU}")
 elseif(WITH_APR)
   find_program(APU_CONFIG_EXECUTABLE NAMES apu-1-config apu-config HINTS "${WITH_APR}/bin" NO_DEFAULT_PATH NO_CACHE)
   if(NOT APU_CONFIG_EXECUTABLE)
@@ -25,6 +23,7 @@ elseif(WITH_APR)
         "[apu] error: apu-config not found at WITH_APR=${WITH_APR}."
     )
   endif()
+  set(APU_OUTPUT_DIRECTORY "${WITH_APR}")
 elseif(WITH_HTTPD)
   # Query apxs to find APU location
   find_program(_APXS_EXECUTABLE NAMES apxs apxs2 HINTS "${WITH_HTTPD}/bin" NO_DEFAULT_PATH NO_CACHE)
@@ -55,7 +54,12 @@ elseif(WITH_HTTPD)
         "[apu] error: apu-config not found at APU_BINDIR=${_APU_BINDIR} (queried from apxs)."
     )
   endif()
+  set(APU_OUTPUT_DIRECTORY "${_APU_BINDIR}")
 else()
+
+  set(APU_DIRECTORY "${DEPENDENCIES_DIRECTORY}/apr-util")
+  set(APU_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/apr-util-dist")
+
   # Build apu from source if not already done
   if(NOT EXISTS "${APU_OUTPUT_DIRECTORY}/.done")
     require_initialized_submodule("${APU_DIRECTORY}")

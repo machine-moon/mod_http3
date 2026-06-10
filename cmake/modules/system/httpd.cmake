@@ -7,9 +7,6 @@ endif()
 include(apr)
 include(apu)
 
-set(HTTPD_DIRECTORY "${DEPENDENCIES_DIRECTORY}/httpd")
-set(HTTPD_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/httpd-dist")
-
 set(HTTPD_VERSION_MIN "2.4.x")
 set(HTTPD_MMN_MIN "20211221")
 
@@ -22,30 +19,34 @@ if(WITH_HTTPD)
         "[httpd] error: apxs not found at WITH_HTTPD=${WITH_HTTPD}."
     )
   endif()
+  set(HTTPD_OUTPUT_DIRECTORY "${WITH_HTTPD}")
 else()
   # httpd depends on openssl
-  require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/openssl")
-  if(BUILD_SSL)
+  if(NOT WITH_SSL)
+    require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/openssl")
     if(NOT OPENSSL_OUTPUT_DIRECTORY OR NOT EXISTS "${OPENSSL_OUTPUT_DIRECTORY}/.done" OR NOT TARGET openssl)
-      message(FATAL_ERROR "[httpd] error: BUILD_HTTPD=ON with BUILD_SSL=ON requires openssl to be built first")
-    endif()
-  else()
-    if(NOT WITH_SSL)
-      message(FATAL_ERROR "[httpd] error: BUILD_HTTPD=ON with BUILD_SSL=OFF requires WITH_SSL=/path/to/openssl")
+      message(FATAL_ERROR "[httpd] error: building httpd from source requires openssl to be built first")
     endif()
   endif()
 
   # httpd depends on apr
-  require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/apr")
-  if(NOT APR_OUTPUT_DIRECTORY OR NOT EXISTS "${APR_OUTPUT_DIRECTORY}/.done" OR NOT TARGET apr)
-    message(FATAL_ERROR "[httpd] error: cannot build httpd without apr -- please build apr first")
+  if(NOT WITH_APR)
+    require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/apr")
+    if(NOT APR_OUTPUT_DIRECTORY OR NOT EXISTS "${APR_OUTPUT_DIRECTORY}/.done" OR NOT TARGET apr)
+      message(FATAL_ERROR "[httpd] error: cannot build httpd without apr -- please build apr first")
+    endif()
   endif()
 
   # httpd depends on apu (until APR v2 release - apr-2.x bundles apu)
-  require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/apr-util")
-  if(NOT APU_OUTPUT_DIRECTORY OR NOT EXISTS "${APU_OUTPUT_DIRECTORY}/.done" OR NOT TARGET apu)
-    message(FATAL_ERROR "[httpd] error: cannot build httpd without apu -- please build apu first")
+  if(NOT WITH_APU AND NOT WITH_APR)
+    require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/apr-util")
+    if(NOT APU_OUTPUT_DIRECTORY OR NOT EXISTS "${APU_OUTPUT_DIRECTORY}/.done" OR NOT TARGET apu)
+      message(FATAL_ERROR "[httpd] error: cannot build httpd without apu -- please build apu first")
+    endif()
   endif()
+
+  set(HTTPD_DIRECTORY "${DEPENDENCIES_DIRECTORY}/httpd")
+  set(HTTPD_OUTPUT_DIRECTORY "${DEPENDENCIES_OUTPUT_DIRECTORY}/httpd-dist")
 
   # Build httpd from source if not already done
   if(NOT EXISTS "${HTTPD_OUTPUT_DIRECTORY}/.done")
@@ -82,10 +83,10 @@ else()
     # Resolve OpenSSL lib dir for rpath - valid assumption that we have already built OpenSSL if we're building httpd from source
     get_filename_component(_HTTPD_OPENSSL_LIBDIR "${OPENSSL_CRYPTO_LIBRARY}" DIRECTORY)
 
-    if(BUILD_SSL)
-      set(_HTTPD_SSL_PREFIX "${OPENSSL_OUTPUT_DIRECTORY}")
-    else()
+    if(WITH_SSL)
       set(_HTTPD_SSL_PREFIX "${WITH_SSL}")
+    else()
+      set(_HTTPD_SSL_PREFIX "${OPENSSL_OUTPUT_DIRECTORY}")
     endif()
 
     execute_process(
