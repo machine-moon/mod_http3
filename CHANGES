@@ -3,6 +3,17 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.34 (2026-07-16)
+--------------------
+  *) Added H3MaxResponseBodySize directive for HTTP/3 responses
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Added H3IdleTimeout directive for QUIC connections
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Added H3HandshakeTimeout directive and connection timer logic
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.33 (2026-07-12)
 --------------------
   *) Added QoL and standard OSS files to improve the contributor experience.

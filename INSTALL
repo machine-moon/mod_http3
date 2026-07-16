@@ -129,9 +129,8 @@
             </Directory>
         </VirtualHost>
 
-     EnableMMAP Off is required. The QUIC response path reads file
-     content via apr_file_read; with MMAP active the file bucket
-     bypasses the QUIC engine and corrupts the response.
+      EnableMMAP is fully supported. All data and memory-mapped buckets
+      are parsed and processed transparently by mod_http3.
 
      mod_http3 injects the Alt-Svc response header automatically
      (H3AltSvc, on by default). That header is how TCP clients

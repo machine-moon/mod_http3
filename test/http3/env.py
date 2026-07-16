@@ -79,8 +79,11 @@ class H3Conf(HttpdConf):
         h3_max_concurrent_streams=None,
         h3_stream_buffer_size=None,
         h3_max_request_body_size=None,
+        h3_max_response_body_size=None,
         h3_alt_svc=None,
         h3_alt_svc_max_age=None,
+        h3_handshake_timeout=None,
+        h3_idle_timeout=None,
         extra_lines=None
     ):
         self.start_vhost(
@@ -103,11 +106,17 @@ class H3Conf(HttpdConf):
             self.add(f"H3StreamBufferSize {h3_stream_buffer_size}")
         if h3_max_request_body_size is not None:
             self.add(f"H3MaxRequestBodySize {h3_max_request_body_size}")
+        if h3_max_response_body_size is not None:
+            self.add(f"H3MaxResponseBodySize {h3_max_response_body_size}")
         if h3_alt_svc is not None:
             val = "on" if h3_alt_svc is True else ("off" if h3_alt_svc is False else h3_alt_svc)
             self.add(f"H3AltSvc {val}")
         if h3_alt_svc_max_age is not None:
             self.add(f"H3AltSvcMaxAge {h3_alt_svc_max_age}")
+        if h3_handshake_timeout is not None:
+            self.add(f"H3HandshakeTimeout {h3_handshake_timeout}")
+        if h3_idle_timeout is not None:
+            self.add(f"H3IdleTimeout {h3_idle_timeout}")
 
         self.add("Protocols h3 http/1.1")
         for line in extra_lines or []:

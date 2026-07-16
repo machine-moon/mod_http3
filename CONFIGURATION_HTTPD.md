@@ -71,6 +71,14 @@ Per-stream read/write buffer size in bytes.
 
 Maximum HTTP/3 request body size in bytes. Request bodies are fully buffered in memory; requests exceeding the limit are rejected.
 
+### H3MaxResponseBodySize
+
+**Syntax:** `H3MaxResponseBodySize bytes`
+**Context:** server config, virtual host
+**Default:** unlimited
+
+Maximum HTTP/3 response body size in bytes. Response bodies are fully buffered in memory pending streaming support; this directive is unset (unlimited) by default so existing large-response deployments are unaffected. Set it to bound worst-case per-request memory use. Responses exceeding the limit are replaced with a `500 Internal Server Error` — the real body is already partially generated and discarded at that point, so its `Content-Length` can no longer be trusted.
+
 ### H3AltSvc
 
 **Syntax:** `H3AltSvc on|off`
@@ -86,6 +94,22 @@ Whether to advertise HTTP/3 support by injecting an `Alt-Svc` response header. T
 **Default:** `86400`
 
 Number of seconds a client may cache the `Alt-Svc` HTTP/3 advertisement (the `ma=` field of the injected header).
+
+### H3HandshakeTimeout
+
+**Syntax:** `H3HandshakeTimeout seconds`
+**Context:** server config, virtual host
+**Default:** `10`
+
+The timeout duration in seconds for QUIC handshakes to complete. If a connection is accepted but fails to finish the cryptographic TLS/QUIC handshake within this period, it is terminated and its resources are cleaned up. Helps prevent resource exhaustion attacks.
+
+### H3IdleTimeout
+
+**Syntax:** `H3IdleTimeout seconds`
+**Context:** server config, virtual host
+**Default:** `300`
+
+The idle timeout duration in seconds for QUIC connections. This maps to the standard QUIC `max_idle_timeout` transport parameter. A connection will be closed if no traffic is sent or received within this timeframe. Use a higher value for applications that require long-lived idle connections (e.g., long-polling, WebSockets over HTTP/3).
 
 ## VirtualHost Configuration
 
@@ -148,7 +172,7 @@ Disable the advertisement entirely with `H3AltSvc off`.
 
 ### EnableMMAP
 
-`EnableMMAP Off` is **required**. The QUIC response path reads file content via `apr_file_read`. With MMAP active, the file bucket bypasses the QUIC engine and corrupts the response.
+`EnableMMAP` is fully supported. The output filter accepts and processes both raw file and memory-mapped (`MMAP`) data buckets transparently.
 
 ## Troubleshooting
 
