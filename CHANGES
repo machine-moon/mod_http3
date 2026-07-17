@@ -3,6 +3,18 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.35 (2026-07-17)
+--------------------
+  *) Added initial firefox support.
+     [Jean-Frederic Clere <jfclere apache.org> <jfclere gmail.com>]
+
+  *) Added mpm prefork and worker support.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Honor SSLKEYLOGFILE like mod_ssl so QUIC sessions can be decrypted in
+     wireshark when debugging browser interop.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.34 (2026-07-16)
 --------------------
   *) Added H3MaxResponseBodySize directive for HTTP/3 responses

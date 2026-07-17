@@ -393,7 +393,7 @@ static int read_from_ssl_ids(nghttp3_conn* conn, QUIC_TSERVER* qtserv, struct h3
 }
 
 /* The crappy test wants 20 bytes */
-static uint8_t nulldata[20] = "12345678901234567890";
+static uint8_t nulldata[20] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 static nghttp3_ssize step_read_data(nghttp3_conn* /*conn*/, int64_t /*stream_id*/, nghttp3_vec* vec, size_t /*veccnt*/, uint32_t* pflags, void* user_data, void* /*stream_user_data*/)
 {
     struct h3ssl* h3ssl = (struct h3ssl*)user_data;

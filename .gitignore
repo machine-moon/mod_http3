@@ -70,6 +70,7 @@ test/*/*/__pycache__/
 cscope.*
 
 # Other
+.ai/
 AGENTS.md
 .TODO
 certs/
