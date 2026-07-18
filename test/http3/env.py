@@ -17,6 +17,9 @@ class H3TestSetup(HttpdTestSetup):
             )
         with open(os.path.join(self.env.server_dir, "conf/modules.conf"), "a") as fd:
             fd.write(f'LoadModule http3_module "{path}"\n')
+            cgid_path = os.path.join(self.env.libexec_dir, "mod_cgid.so")
+            if os.path.isfile(cgid_path):
+                fd.write(f'LoadModule cgid_module "{cgid_path}"\n')
 
 
 class H3TestEnv(HttpdTestEnv):

@@ -3,6 +3,11 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.36 (2026-07-18)
+--------------------
+  *) Replaced O(n^2) body buffering with a doubling-capacity strategy.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.35 (2026-07-17)
 --------------------
   *) Added initial firefox support.
