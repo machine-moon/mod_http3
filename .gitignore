@@ -6,9 +6,16 @@ builddir-*/
 dependencies/*-*
 CMakeFiles/
 CMakeCache.txt
+CPackConfig.cmake
+CPackProjectConfig.cmake
+CPackSourceConfig.cmake
 CTestTestfile.cmake
 cmake_install.cmake
 compile_commands.json
+Makefile
+examples/Makefile
+test/Makefile
+test/gen/
 
 # Compiled objects and libraries
 *.o
