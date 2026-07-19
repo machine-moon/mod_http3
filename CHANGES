@@ -3,6 +3,11 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.38 (2026-07-19)
+--------------------
+  *) Added proper stream ACK tracking to resolve QPACK dynamic table stalls
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.37 (2026-07-18)
 --------------------
   *) Added an http3-status handler exposing per-child HTTP/3 metrics as JSON.
