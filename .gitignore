@@ -78,6 +78,7 @@ cscope.*
 
 # Other
 .ai/
+graphify-out/
 AGENTS.md
 .TODO
 certs/
