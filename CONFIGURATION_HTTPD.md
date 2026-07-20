@@ -211,7 +211,7 @@ LogLevel http3:trace8
 
 ```
 # Successful configuration
-h3_post_config: [PID] cert_path=/path/to/cert key_path=/path/to/key
+h3_post_config: pid=[PID] cert=/path/to/cert key=/path/to/key h3_port=443 mpm=event threaded=1 forked=2 max_threads=25
 
 # Worker thread started
 h3_child_init

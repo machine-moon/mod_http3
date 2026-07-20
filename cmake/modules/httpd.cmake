@@ -77,13 +77,13 @@ else()
     endif()
 
     execute_process(
-      COMMAND ${CMAKE_COMMAND} -E env LDFLAGS=-L${_HTTPD_OPENSSL_LIBDIR}
+      COMMAND ${CMAKE_COMMAND} -E env "LDFLAGS=-L${_HTTPD_OPENSSL_LIBDIR} -Wl,-rpath,${_HTTPD_OPENSSL_LIBDIR}"
         "${HTTPD_DIRECTORY}/configure"
           --prefix=${HTTPD_OUTPUT_DIRECTORY}
           --with-apr=${APR_OUTPUT_DIRECTORY}
           --with-apr-util=${APU_OUTPUT_DIRECTORY}
           --enable-so
-          --with-mpm=event
+          --enable-mpms-shared=all
           --enable-mods-shared=all
           --enable-ssl
           --with-ssl=${_HTTPD_SSL_PREFIX}

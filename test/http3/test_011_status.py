@@ -17,19 +17,19 @@ class TestStatus:
         url = env.mkurl("https", "test1", "/cgi/echo.py")
         r = env.curl_post_data(url, data="Hello Status", options=["--http3", "-k"])
         assert r.exit_code == 0
-        
+
         status_url = env.mkurl("https", "test1", "/http3-status")
         r = env.curl_get(status_url, options=["--http3", "-k"])
         assert r.exit_code == 0
         assert r.response["status"] == 200
-        
+
         stats = json.loads(r.response["body"])
         assert "live_workers" in stats
         assert "total_connections" in stats
         assert "total_streams" in stats
         assert "total_bytes_read" in stats
         assert "total_bytes_written" in stats
-        
+
         # We did at least one request, so connections should be >= 1
         assert stats["total_connections"] >= 1
         assert stats["total_streams"] >= 1

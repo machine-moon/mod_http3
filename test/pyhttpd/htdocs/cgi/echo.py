@@ -11,7 +11,7 @@ def main():
         "body_size": len(body),
         "body_sha256": hashlib.sha256(body).hexdigest() if body else None,
     }
-    
+
     print("Content-Type: application/json")
     print()
     print(json.dumps(response))

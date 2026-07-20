@@ -3,6 +3,23 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.40 (2026-07-20)
+--------------------
+  *) Resolved name-based virtual hosts from the :authority pseudo-header.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Replaced select() with poll() in the connection event loop.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Eliminated event-thread head-of-line blocking between sessions.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Supported the worker and prefork MPMs in addition to event.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Logged the active MPM at startup and in the unsupported-MPM error.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.39 (2026-07-19)
 --------------------
   *) Offloaded HTTP/3 request processing to a thread pool.
