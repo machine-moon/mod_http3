@@ -61,7 +61,9 @@ Maximum number of concurrent QUIC/HTTP/3 connections per child process. New conn
 **Context:** server config, virtual host
 **Default:** `65536`
 
-Per-stream read/write buffer size in bytes.
+Per-stream request and streaming-response buffer size in bytes. For responses,
+this bounds the producer/consumer queue between Apache request workers and the
+QUIC event thread; a full queue applies backpressure to the request worker.
 
 ### H3MaxRequestBodySize
 
@@ -77,7 +79,11 @@ Maximum HTTP/3 request body size in bytes. Request bodies are fully buffered in 
 **Context:** server config, virtual host
 **Default:** unlimited
 
-Maximum HTTP/3 response body size in bytes. Response bodies are fully buffered in memory pending streaming support; this directive is unset (unlimited) by default so existing large-response deployments are unaffected. Set it to bound worst-case per-request memory use. Responses exceeding the limit are replaced with a `500 Internal Server Error` — the real body is already partially generated and discarded at that point, so its `Content-Length` can no longer be trusted.
+Maximum HTTP/3 response body size in bytes. By default, responses stream through
+the bounded queue controlled by `H3StreamBufferSize` and are not retained in
+full. Setting an explicit finite limit switches that virtual host to bounded
+whole-response buffering, allowing an over-limit response to be replaced with
+a `500 Internal Server Error` before its headers or partial body are sent.
 
 ### H3AltSvc
 

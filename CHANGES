@@ -3,6 +3,17 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.41 (2026-07-21)
+--------------------
+  *) Streamed response bodies through a bounded per-stream queue.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Made stream draining fair so one busy stream cannot starve the others.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Preserved QUIC client addresses instead of reporting 0.0.0.0.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.40 (2026-07-20)
 --------------------
   *) Resolved name-based virtual hosts from the :authority pseudo-header.

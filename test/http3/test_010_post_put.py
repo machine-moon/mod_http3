@@ -7,7 +7,7 @@ from .env import H3Conf
 class TestPostPut:
     @pytest.fixture(autouse=True, scope="class")
     def _class_scope(self, env):
-        H3Conf(env).add_vhost_test1().install()
+        H3Conf(env).add_vhost_test1(h3_stream_buffer_size=1024).install()
         assert env.apache_restart() == 0
 
     def test_001_post_small_body(self, env):
@@ -30,7 +30,7 @@ class TestPostPut:
         with open(fpath, "wb") as f:
             f.write(data)
 
-        r = env.curl_raw([url], options=["--http3", "-k", "--upload-file", fpath])
+        r = env.curl_raw([url], options=["--http3-only", "-k", "--upload-file", fpath])
         assert r.exit_code == 0, r.stderr + r.stdout
         assert r.response is not None
         assert r.response["status"] == 200

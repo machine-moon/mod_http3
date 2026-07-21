@@ -24,6 +24,7 @@ test/gen/
 *.so.*
 *.lo
 *.la
+*.lai
 *.slo
 
 # Sanitizer / coverage artefacts
