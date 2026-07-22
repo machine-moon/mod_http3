@@ -134,7 +134,7 @@
 
      mod_http3 injects the Alt-Svc response header automatically
      (H3AltSvc, on by default). That header is how TCP clients
-     learn HTTP/3 is available on UDP. See CONFIGURATION_HTTPD.md
+     learn HTTP/3 is available on UDP. See docs/configuration_httpd.md
      for H3AltSvc, H3AltSvcMaxAge, and the other H3* directives.
 
   4. Open the UDP port:
@@ -166,5 +166,5 @@
   Further reading
   ---------------
 
-  CONFIGURATION.md        - Advanced build options
-  CONFIGURATION_HTTPD.md  - httpd directive reference
+  docs/configuration.md       - Advanced build options
+  docs/configuration_httpd.md - httpd directive reference

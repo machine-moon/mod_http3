@@ -2,9 +2,9 @@
 
 Advanced build options, dependency management, and build internals.
 
-For quick start and deployment, see [INSTALL](INSTALL).
+For quick start and deployment, see [INSTALL](../INSTALL).
 
-For httpd runtime directives (`H3CertificatePath`, VirtualHost), see [CONFIGURATION_HTTPD.md](CONFIGURATION_HTTPD.md).
+For httpd runtime directives (`H3CertificatePath`, VirtualHost), see [httpd Configuration](configuration_httpd.md).
 
 ## Build Commands
 

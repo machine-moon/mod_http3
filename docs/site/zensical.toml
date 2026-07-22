@@ -1,0 +1,85 @@
+[project]
+site_name = "mod_http3"
+site_description = "HTTP/3 and QUIC support for Apache httpd"
+site_author = "The mod_http3 Project Authors"
+site_url = "https://machine-moon.github.io/mod_http3/"
+repo_url = "https://github.com/machine-moon/mod_http3"
+repo_name = "machine-moon/mod_http3"
+docs_dir = "pages"
+site_dir = "build"
+
+copyright = """
+Copyright &copy; 2026 The mod_http3 Project Authors &middot; Apache License 2.0
+"""
+
+# Navigation. Kept explicit so the reading order tells a story:
+# install it, configure it, understand it, then dive into the C API.
+nav = [
+  { "Home" = "index.md" },
+  { "Getting Started" = [
+    { "Build" = "build.md" },
+    { "Deploy" = "deploy.md" },
+    { "Verify" = "verify.md" },
+  ] },
+  { "Configuration" = [
+    { "Build Configuration" = "configuration.md" },
+    { "httpd Directives" = "configuration_httpd.md" },
+    { "Operational Limits" = "limits.md" },
+  ] },
+  { "Guides" = [
+    { "Architecture" = "architecture.md" },
+  ] },
+  { "Testing" = [
+    { "Browser" = "browser-testing.md" },
+    { "curl" = "curl-testing.md" },
+    { "Examples" = "examples-testing.md" },
+  ] },
+  { "API Reference" = [
+    { "Overview" = "api.md" },
+    { "Structs" = "api/index_classes.md" },
+    { "Source Files" = "api/index_files.md" },
+  ] },
+  { "Project" = [
+    { "Releases" = "releases.md" },
+    { "Security" = "security.md" },
+    { "Contributing" = "contributing.md" },
+  ] },
+]
+
+# Single light palette on purpose: no dark-mode toggle is rendered.
+[project.theme]
+language = "en"
+features = [
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.tracking",
+  "navigation.tabs",
+  "navigation.sections",
+  "navigation.indexes",
+  "navigation.top",
+  "navigation.footer",
+  "toc.follow",
+  "content.code.copy",
+  "content.code.annotate",
+  "content.tooltips",
+  "search.highlight",
+]
+
+[project.theme.icon]
+repo = "fontawesome/brands/github"
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "indigo"
+accent = "indigo"
+
+[project.extra]
+# Suppress the generator credit line in the footer.
+generator = false
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/machine-moon/mod_http3"
+name = "mod_http3 on GitHub"
+
+# markdown_extensions omitted so the default set (mermaid, admonitions, tabs) applies.

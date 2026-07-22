@@ -1,0 +1,25 @@
+version: 2
+
+build:
+  os: ubuntu-24.04
+  tools:
+    python: "3.12"
+  apt_packages:
+    - doxygen
+  jobs:
+    pre_build:
+      # doxybook2 has no PyPI package; fetch the release binary into ~/.local/bin,
+      # which scripts/generate_docs.sh looks for.
+      - curl -fsSL -o /tmp/doxybook2.zip https://github.com/matusnovak/doxybook2/releases/download/v1.5.0/doxybook2-linux-amd64-v1.5.0.zip
+      - unzip -o -q /tmp/doxybook2.zip -d /tmp/doxybook2
+      - mkdir -p "$HOME/.local/bin"
+      - install -m 0755 "$(find /tmp/doxybook2 -type f -name doxybook2 | head -1)" "$HOME/.local/bin/doxybook2"
+    build:
+      html:
+        - bash ../../scripts/generate_docs.sh
+        - mkdir -p "$READTHEDOCS_OUTPUT/html"
+        - cp -a build/. "$READTHEDOCS_OUTPUT/html/"
+
+python:
+  install:
+    - requirements: site/requirements.txt

@@ -27,7 +27,7 @@ A clear description of what you expected to happen.
 **Environment (please complete the following information):**
  - OS: [e.g. Ubuntu 22.04]
  - Compiler Version: [e.g. GCC 11.3.0]
- - mod_http3 Version or Commit hash: [e.g. 0.1.0 or abc1234]
+ - mod_http3 Version: [e.g. 0.1.0 or abc1234]
  - httpd Version: [e.g. 2.5.0-trunk]
  - OpenSSL Version: [e.g. 3.5.0]
  - nghttp3 Version: [e.g. 1.17.0]

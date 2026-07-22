@@ -1,0 +1,54 @@
+name: Documentation check
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/docs-check.yml"
+      - "docs/*.md"
+      - "docs/site/**"
+      - "scripts/generate_docs.sh"
+      - "mod_http3/include/**"
+      - "mod_http3/src/**"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+  push:
+    branches: [trunk]
+    paths:
+      - ".github/workflows/docs-check.yml"
+      - "docs/*.md"
+      - "docs/site/**"
+      - "scripts/generate_docs.sh"
+      - "mod_http3/include/**"
+      - "mod_http3/src/**"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen
+
+      - name: Install doxybook2
+        run: |
+          curl -fsSL -o /tmp/doxybook2.zip \
+            https://github.com/matusnovak/doxybook2/releases/download/v1.5.0/doxybook2-linux-amd64-v1.5.0.zip
+          unzip -o -q /tmp/doxybook2.zip -d /tmp/doxybook2
+          sudo install -m 0755 "$(find /tmp/doxybook2 -type f -name doxybook2 | head -1)" /usr/local/bin/doxybook2
+          doxybook2 --version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install site generator
+        run: pip install -r docs/site/requirements.txt
+
+      - name: Build documentation (strict)
+        run: bash scripts/generate_docs.sh
