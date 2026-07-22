@@ -2,7 +2,7 @@
 
 Apache httpd configuration directives for mod_http3.
 
-For build and installation, see [INSTALL](INSTALL).
+For build and installation, see [INSTALL](../INSTALL).
 
 ## Overview
 

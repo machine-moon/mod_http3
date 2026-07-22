@@ -1,0 +1,16 @@
+{
+  "baseUrl": "",
+  "useFolders": false,
+  "indexInFolders": false,
+  "mainPageInRoot": false,
+  "linkSuffix": ".md",
+  "linkLowercase": false,
+  "replaceUnderscoresInAnchors": false,
+  "copyImages": false,
+  "foldersToGenerate": [
+    "classes",
+    "files"
+  ],
+  "indexClassesTitle": "Structs",
+  "indexFilesTitle": "Source Files"
+}

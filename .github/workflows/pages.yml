@@ -1,0 +1,63 @@
+name: Deploy documentation
+
+on:
+  push:
+    branches: [trunk]
+    paths:
+      - ".github/workflows/pages.yml"
+      - "docs/*.md"
+      - "docs/site/**"
+      - "scripts/generate_docs.sh"
+      - "mod_http3/include/**"
+      - "mod_http3/src/**"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Doxygen
+        run: sudo apt-get update && sudo apt-get install -y doxygen
+
+      - name: Install doxybook2
+        run: |
+          curl -fsSL -o /tmp/doxybook2.zip \
+            https://github.com/matusnovak/doxybook2/releases/download/v1.5.0/doxybook2-linux-amd64-v1.5.0.zip
+          unzip -o -q /tmp/doxybook2.zip -d /tmp/doxybook2
+          sudo install -m 0755 "$(find /tmp/doxybook2 -type f -name doxybook2 | head -1)" /usr/local/bin/doxybook2
+          doxybook2 --version
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install site generator
+        run: pip install -r docs/site/requirements.txt
+
+      - name: Build documentation
+        run: bash scripts/generate_docs.sh
+
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site/build
+      - id: deployment
+        uses: actions/deploy-pages@v4

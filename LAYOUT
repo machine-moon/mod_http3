@@ -12,8 +12,6 @@ Last updated: 2026-07-13
   AUTHORS .................. Copyright holders and individual contributors
   CHANGES .................. Chronological release changelog
   CMakeLists.txt ........... Top-level CMake build definition
-  CONFIGURATION.md ......... Advanced CMake build options and internals
-  CONFIGURATION_HTTPD.md ... httpd directive reference for mod_http3
   CONTRIBUTING.md .......... Community governance, roles, voting, and workflow
   COPYING .................. License pointer
   INSTALL .................. Build, package, and deployment instructions

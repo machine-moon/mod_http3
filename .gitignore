@@ -85,3 +85,5 @@ AGENTS.md
 certs/
 keys/
 config.ini
+docs/site/build/
+docs/site/pages/api/

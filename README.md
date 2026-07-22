@@ -42,7 +42,7 @@ See [INSTALL](INSTALL) for full build instructions.
 | `ENABLE_UBSAN` | `OFF` | UB Sanitizer (requires `Debug`) |
 | `ENABLE_WERROR` | `OFF` | Treat warnings as errors |
 
-See [CONFIGURATION.md](CONFIGURATION.md) for advanced options and dependency internals.
+See [Build Configuration](docs/configuration.md) for advanced options and dependency internals.
 
 ## Deploy
 
@@ -78,7 +78,7 @@ Listen 4433 https
 </VirtualHost>
 ```
 
-HTTP/3 support is advertised to clients automatically via an `Alt-Svc` response header (`H3AltSvc`, on by default). See [CONFIGURATION_HTTPD.md](CONFIGURATION_HTTPD.md) for all directives and [INSTALL](INSTALL) for complete deployment steps.
+HTTP/3 support is advertised to clients automatically via an `Alt-Svc` response header (`H3AltSvc`, on by default). See [httpd Configuration](docs/configuration_httpd.md) for all directives and [INSTALL](INSTALL) for complete deployment steps.
 
 ## Contributing
 

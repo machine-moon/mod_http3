@@ -79,7 +79,7 @@ git checkout -b feature/my-new-feature
   - Explain *why* the change is being made and what it does.
 
 ### Coding Standards
-All code must adhere to the project's [Coding Standards](docs/coding-standards.md). You can format your code using the provided `.clang-format` configuration:
+All code must adhere to the project's Coding Standards (see docs/coding-standards.md). You can format your code using the provided `.clang-format` configuration:
 ```sh
 clang-format -i mod_http3/src/*.c mod_http3/include/*.h
 ```
@@ -104,4 +104,4 @@ When a security vulnerability is identified:
 
 ## Release and Backports
 
-For detailed information on the versioning scheme, release candidates, testing, and voting on releases, see the [Release Process Guide](docs/release-process.md).
+For detailed information on the versioning scheme, release candidates, testing, and voting on releases, see the Release Process Guide in docs/release-process.md.
