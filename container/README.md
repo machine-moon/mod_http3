@@ -1,6 +1,6 @@
 # Container
 
-Run Apache httpd with mod_http3 in a container. The container builds everything from source and serves HTTP/1.1, HTTP/2, and HTTP/3 on port 8443.
+Run Apache httpd with mod_http3 in a container. The container builds everything from source and serves HTTP/3 on port 8443.
 
 Commands use `podman`/`podman compose`. Substitute `docker`/`docker compose` - flags and compose format are identical.
 
@@ -51,8 +51,6 @@ Test:
 
 ```sh
 curl --http3 -k -sI https://localhost:8443/
-curl --http2 -k -sI https://localhost:8443/
-curl --http1.1 -k -sI https://localhost:8443/
 ```
 
 Stop:
@@ -70,12 +68,11 @@ Listen 8443 https
 
 <VirtualHost *:8443>
     SSLEngine on
-    Protocols h3 h2 http/1.1
+    Protocols h3
 
     H3CertificatePath    conf/certs/server.crt
     H3CertificateKeyPath conf/certs/server.key
-
-    Header always set Alt-Svc "h3=\":8443\"; ma=60; persist=1"
+    H3Port               8443
 </VirtualHost>
 ```
 

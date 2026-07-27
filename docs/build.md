@@ -12,6 +12,9 @@ The module is written to `build/lib/mod_http3.so`.
 
 ## Requirements
 
+The versions below are what the submodule build produces; supply your own with
+the `WITH_*` options only if they meet these minimums.
+
 | Dependency | Minimum |
 | --- | --- |
 | OpenSSL | 3.5.0 with QUIC support |

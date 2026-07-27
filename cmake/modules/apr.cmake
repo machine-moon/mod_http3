@@ -178,13 +178,9 @@ endif()
 
 message(STATUS "[apr] found (${APR_VERSION}): ${APR_OUTPUT_DIRECTORY}")
 
-separate_arguments(APR_LINK_FLAGS_LIST UNIX_COMMAND "${APR_LINK_FLAGS}")
-string(REGEX MATCH "-L([^ \t]+)" APR_L_MATCH "${APR_LINK_FLAGS}")
-set(APR_LIB_DIR "${CMAKE_MATCH_1}")
+string(REGEX MATCH "-L([^ \t]+)" _ "${APR_LINK_FLAGS}")
+find_library(APR_LIBRARY NAMES apr-1 HINTS "${CMAKE_MATCH_1}" "${APR_OUTPUT_DIRECTORY}/lib" REQUIRED)
 
 add_library(apr INTERFACE)
 target_include_directories(apr SYSTEM INTERFACE "${APR_INCLUDE_DIR}")
-target_link_options(apr INTERFACE ${APR_LINK_FLAGS_LIST})
-if(APR_LIB_DIR)
-  target_link_options(apr INTERFACE "-L${APR_LIB_DIR}")
-endif()
+target_link_libraries(apr INTERFACE "${APR_LIBRARY}")

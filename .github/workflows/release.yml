@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+
+      - name: Verify the tag matches the project version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          grep -q "^project(mod_http3 VERSION ${version%%-rc*})$" CMakeLists.txt
+
+      - name: Install build prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake ninja-build pkg-config \
+            autoconf automake libtool libtool-bin perl python3 \
+            libpcre2-dev libxml2-dev libexpat1-dev zlib1g-dev \
+            dpkg-dev rpm
+
+      - name: Build the release artifacts
+        run: bash scripts/release.sh
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          case "$tag" in *-rc*) rc="--draft --prerelease" ;; *) rc="" ;; esac
+          gh release create "$tag" $rc --generate-notes \
+            --title "mod_http3 ${tag#v}" build-release/dist/*
