@@ -46,10 +46,17 @@ list(JOIN DSO_MODULES " " DSO_MODULES)
 list(JOIN MPM_MODULES " " MPM_MODULES)
 
 # -- curl for the pytest clients --
-find_program(CURL_BIN NAMES curl HINTS "/opt/curl/bin" "/usr/bin" "/usr/local/bin" NO_DEFAULT_PATH)
+find_program(CURL_BIN NAMES curl HINTS "${CURL}" "${CURL}/.." "${CURL}/bin" "/opt/curl/bin" "/usr/bin" "/usr/local/bin" NO_DEFAULT_PATH)
 if(NOT CURL_BIN)
   message(WARNING "[test] curl not found - pytest clients will use 'curl' from PATH at runtime")
   set(CURL_BIN "curl")
+else()
+  execute_process(COMMAND "${CURL_BIN}" -V
+    OUTPUT_VARIABLE _CURL_RESULT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  if(NOT _CURL_RESULT MATCHES "HTTP3")
+    message(WARNING
+      "[test] ${CURL_BIN} is built without HTTP/3 support")
+  endif()
 endif()
 
 # -- pyhttpd config --

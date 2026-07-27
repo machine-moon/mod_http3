@@ -105,10 +105,16 @@ release candidate:
 
     vX.Y.Z-rc1, vX.Y.Z-rc2, …
 
-The scripts/release.sh tool automates candidate creation, artifact
-building, signing, and GitHub draft releases. A candidate is promoted
-to the final vX.Y.Z tag only after it receives at least three +1 votes
-from active PMC members with no unresolved issues.
+Pushing the candidate tag is what publishes it: the release workflow
+builds and hashes the artifacts with scripts/release.sh and uploads them
+to a GitHub draft prerelease. A candidate is promoted to the final
+vX.Y.Z tag only after it receives at least three +1 votes from active
+PMC members with no unresolved issues.
+
+Note that artifacts are named from the CMake project version, so an
+-rcN candidate and the final release produce identically named files.
+The candidate is identified by its tag and its GitHub prerelease, not
+by the artifact filenames.
 
 If a candidate fails its vote, the tag is removed, the issue is fixed,
 and a new candidate suffix is used (rc2, rc3, …).

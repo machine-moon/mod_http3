@@ -22,7 +22,7 @@ Discussions should remain respectful, professional, and focused on building a qu
 ## Bug Reports
 
 If you spot a bug, please check the following before opening an issue:
-1. **Clean codebase**: The bug occurs on an unmodified version of the main branch.
+1. **Clean codebase**: The bug occurs on an unmodified version of the `trunk` branch.
 2. **Reproducible**: You can consistently reproduce the issue.
 3. **No Duplicates**: Search the open and closed issues to ensure the bug has not already been reported.
 

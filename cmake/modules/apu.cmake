@@ -186,13 +186,9 @@ endif()
 
 message(STATUS "[apu] found (${APU_VERSION}): ${APU_OUTPUT_DIRECTORY}")
 
-separate_arguments(APU_LINK_FLAGS_LIST UNIX_COMMAND "${APU_LINK_FLAGS}")
-string(REGEX MATCH "-L([^ \t]+)" APU_L_MATCH "${APU_LINK_FLAGS}")
-set(APU_LIB_DIR "${CMAKE_MATCH_1}")
+string(REGEX MATCH "-L([^ \t]+)" _ "${APU_LINK_FLAGS}")
+find_library(APU_LIBRARY NAMES aprutil-1 HINTS "${CMAKE_MATCH_1}" "${APU_OUTPUT_DIRECTORY}/lib" REQUIRED)
 
 add_library(apu INTERFACE)
 target_include_directories(apu SYSTEM INTERFACE "${APU_INCLUDE_DIR}")
-target_link_options(apu INTERFACE ${APU_LINK_FLAGS_LIST})
-if(APU_LIB_DIR)
-  target_link_options(apu INTERFACE "-L${APU_LIB_DIR}")
-endif()
+target_link_libraries(apu INTERFACE "${APU_LIBRARY}")

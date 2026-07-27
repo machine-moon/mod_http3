@@ -28,19 +28,19 @@ For a release candidate to be officially published:
 
 ## 3. Release Workflow
 
-Release candidates are prepared from a clean checkout of the target branch. We use standard `git` and `gh` (GitHub CLI) commands for version control, and a simple helper script (`scripts/release.sh`) to build, hash, and sign the artifacts.
+Pushing a `v*` tag publishes the release. The [Release workflow](../.github/workflows/release.yml) checks out the tag, runs `scripts/release.sh`, and uploads `build-release/dist/` to a GitHub release named after the tag. An `-rcN` tag is published as a draft prerelease; a bare `vX.Y.Z` tag as a normal release.
 
 ```mermaid
 graph TD
     A[Start: git checkout branch] --> B[Bump VERSION in CMakeLists.txt]
-    B --> C[Tag candidate & run scripts/release.sh]
-    C --> D[Push tag & draft GitHub release]
-    D --> E[Prep vote email]
+    B --> C[Update CHANGES & commit]
+    C --> D[Push vX.Y.Z-rc1 tag]
+    D --> E[CI builds & drafts prerelease]
     E --> F{Community Vote}
-    F -- Fail/Bug Found --> G[Discard candidate tag]
+    F -- Fail/Bug Found --> G[Discard candidate tag & draft]
     G --> A
-    F -- Pass --> H[Create final tag & run scripts/release.sh]
-    H --> I[Push final tag & publish GitHub release]
+    F -- Pass --> H[Push final vX.Y.Z tag]
+    H --> I[CI publishes the release]
     I --> J[Stage site/download updates]
     J --> K[Announce]
 ```
@@ -48,34 +48,24 @@ graph TD
 ### Step-by-Step Process
 
 1. **Prepare Candidate**:
-   Ensure you have a clean worktree. Bump the `VERSION` field in `project(mod_http3 VERSION X.Y.Z)` at the top of [CMakeLists.txt](../CMakeLists.txt), update `CHANGES`, and commit. Then create the local candidate tag (e.g., `vX.Y.Z-rc1`):
-   ```sh
-   git tag -a vX.Y.Z-rc1 -m "mod_http3 X.Y.Z release candidate 1"
-   ```
+   Bump the `VERSION` field in `project(mod_http3 VERSION X.Y.Z)` at the top of [CMakeLists.txt](../CMakeLists.txt), update `CHANGES`, and commit. Artifact names come from that CMake version, and the workflow refuses to build if it disagrees with the tag.
 
-2. **Generate Artifacts & Sign**:
-   Run the release script to build the release artifacts, generate SHA256 checksums, and create detached PGP signatures (`.asc`):
+2. **Tag and Push the Candidate**:
    ```sh
+   git tag -a vX.Y.Z-rc1 -m "mod_http3 X.Y.Z-rc1"
    ./scripts/release.sh
+   git push origin vX.Y.Z-rc1
    ```
-   **Note:** You must have `gpg` and `sha256sum` installed, and an active GPG key. If you have multiple keys, you can specify one using `export GPG_KEY=<fingerprint>`.
+   Candidate tags carry an `-rcN` suffix, so they are tagged by hand; `scripts/release.sh` builds the artifacts locally so you can inspect them. Pushing the tag is what starts the workflow, and the workflow is the only thing that publishes a release — it re-checks the tag against `CMakeLists.txt`.
 
-   This will create the following files in `build-release/dist/` (each with a `.sha256` and `.asc`):
+   The release carries these assets, each with a `.sha256` beside it:
    - `mod_http3-X.Y.Z.tar.gz` / `mod_http3-X.Y.Z.zip` — source snapshots (the authoritative release artifacts)
    - `mod_http3-X.Y.Z-linux-<arch>.tar.gz` / `mod_http3-X.Y.Z-linux-<arch>.zip` — generic Linux binaries
    - `mod_http3-X.Y.Z.<arch>.rpm` — RHEL/Fedora layout
    - `mod_http3_X.Y.Z_<arch>.deb` — Debian/Ubuntu layout
 
-3. **Stage Candidate and Call Vote**:
-   Push the candidate tag to the repository:
-   ```sh
-   git push origin vX.Y.Z-rc1
-   ```
-   Create a draft prerelease on GitHub and upload all artifacts from `build-release/dist/`:
-   ```sh
-   gh release create vX.Y.Z-rc1 --draft --prerelease --title "mod_http3 X.Y.Z-rc1" build-release/dist/*
-   ```
-   Draft the vote email by hand, referencing the tag, tarball URL, and checksums. Send the vote proposal to the developer list to open the 72-hour vote.
+3. **Call the Vote**:
+   Draft the vote email by hand, referencing the tag, the release URL, and the checksums. Send the vote proposal to the developer list to open the 72-hour vote.
 
 4. **Handling Failures**:
    If the community finds a bug or votes down the candidate, remove the GitHub draft release and the local/remote tags:
@@ -87,15 +77,13 @@ graph TD
    Apply the fix, update your checkout, and restart from step 1 using the next candidate suffix (e.g., `rc2`).
 
 5. **Publish Approved Release**:
-   Once the vote passes, create the final tag `vX.Y.Z` and push it:
+   Once the vote passes, create and push the final tag. The workflow rebuilds from that tag and publishes the release:
    ```sh
-   git tag -a vX.Y.Z -m "mod_http3 X.Y.Z release"
+   ./scripts/release.sh --tag
    git push origin vX.Y.Z
    ```
-   Re-run `./scripts/release.sh` to build the final artifacts, then create the final GitHub release:
-   ```sh
-   gh release create vX.Y.Z --title "mod_http3 X.Y.Z" build-release/dist/*
-   ```
+   `--tag` (`-t`) reads the version from `CMakeLists.txt` and creates the matching annotated `vX.Y.Z` tag before building.
+   A tag can only be published once. To redo a release, delete it as in step 4 and push the tag again.
 
 6. **Stage and Commit Site Updates**:
    Update website documentation, download pages, and CVE details, then commit them to publish.
@@ -107,35 +95,14 @@ graph TD
 
 ## 4. Verifying Releases
 
-Users and developers should verify the integrity and origin of downloaded releases using PGP signatures and SHA hashes.
+Every artifact ships with a `.sha256` file beside it. Download both and check:
 
-### Verifying PGP Signatures
-1. Import the author's public key from a public keyserver. You can find the key on [keys.openpgp.org](https://keys.openpgp.org/) or [keyserver.ubuntu.com](https://keyserver.ubuntu.com/). For example:
-   ```sh
-   gpg --keyserver hkps://keys.openpgp.org --recv-keys <KEY_ID>
-   ```
-2. Verify the detached signatures for each artifact:
-   ```sh
-   for sig in *.asc; do
-     if [[ "$sig" == "SHA256SUMS.asc" ]]; then
-       gpg --verify SHA256SUMS.asc SHA256SUMS
-     else
-       artifact="${sig%.asc}"
-       gpg --verify "$sig" "$artifact"
-     fi
-   done
-   ```
-   Ensure the output reports a `Good signature` from an authorized committer for each artifact.
+```sh
+gh release download vX.Y.Z --pattern 'mod_http3-X.Y.Z.tar.gz*'
+sha256sum --check mod_http3-X.Y.Z.tar.gz.sha256
+```
 
-### Verifying Checksums
-First verify that the signed manifest authenticates every individual checksum file:
-```sh
-sha256sum -c SHA256SUMS
-```
-Then verify every artifact against its individual checksum:
-```sh
-for checksum in *.sha256; do sha256sum -c "$checksum"; done
-```
+Provenance comes from the release itself: the assets are built by the [Release workflow](../.github/workflows/release.yml) from the tagged tree, and the run linked on the release page shows the exact commit and build log.
 
 ---
 

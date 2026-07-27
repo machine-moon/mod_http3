@@ -91,8 +91,14 @@
 
      $ bash scripts/mkcert.sh /path/to/httpd/conf/certs
        Generated:
+         CA key      : /path/to/httpd/conf/certs/ca.key
+         CA crt      : /path/to/httpd/conf/certs/ca.crt
          private key : /path/to/httpd/conf/certs/server.key
          public  crt : /path/to/httpd/conf/certs/server.crt
+
+     The script mints a local CA and signs the leaf with it; browsers
+     reject a directly-trusted self-signed leaf. Import ca.crt to trust
+     the server. The script refuses to overwrite existing keys.
 
      The key must be readable by the httpd child user:
 

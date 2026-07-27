@@ -38,6 +38,16 @@ set(CPACK_SOURCE_IGNORE_FILES
     "/dependencies/"
     "/certs/"
     "/pyhttpd/config[.]ini$"
+    "/test/gen/"
+    "/[.]libs/"
+    "[.]o$"
+    "[.]a$"
+    "[.]so$"
+    "[.]lo$"
+    "[.]la$"
+    "[.]lai$"
+    "[.]slo$"
+    "[.]log$"
     "[.]tar[.]gz$"
     "[.]zip$"
     "[.]rpm$"
@@ -106,7 +116,7 @@ set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${CPACK_PACKAGE_HOMEPAGE_URL}")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION}")
 set(CPACK_DEBIAN_PACKAGE_SUMMARY "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS "apache2")
-set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS OFF)
 
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|AMD64")

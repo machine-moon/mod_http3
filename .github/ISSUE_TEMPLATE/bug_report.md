@@ -8,7 +8,7 @@ assignees: ''
 
 <!-- 
 Before submitting, please ensure:
-1. You are on a clean, unmodified codebase (main branch or latest release).
+1. You are on a clean, unmodified codebase (trunk branch or latest release).
 2. You can consistently reproduce the issue.
 3. You have searched open and closed issues to ensure this is not a duplicate.
 4. You are reporting only ONE bug per issue.
