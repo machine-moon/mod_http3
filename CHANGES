@@ -3,6 +3,15 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.44 (2026-07-28)
+--------------------
+  *) Added the H3AddressValidation directive to turn QUIC Retry address
+     validation off for handshakes that must complete in one round trip.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Reworked the Retry tests to exercise both settings of the directive.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.43 (2026-07-24)
 --------------------
   *) Fixed apu/apr linking on debian systems.
