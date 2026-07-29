@@ -87,6 +87,7 @@ class H3Conf(HttpdConf):
         h3_alt_svc_max_age=None,
         h3_handshake_timeout=None,
         h3_idle_timeout=None,
+        h3_address_validation=None,
         extra_lines=None
     ):
         self.start_vhost(
@@ -120,6 +121,9 @@ class H3Conf(HttpdConf):
             self.add(f"H3HandshakeTimeout {h3_handshake_timeout}")
         if h3_idle_timeout is not None:
             self.add(f"H3IdleTimeout {h3_idle_timeout}")
+        if h3_address_validation is not None:
+            val = "on" if h3_address_validation is True else ("off" if h3_address_validation is False else h3_address_validation)
+            self.add(f"H3AddressValidation {val}")
 
         self.add("Protocols h3 http/1.1")
         for line in extra_lines or []:

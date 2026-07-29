@@ -117,6 +117,16 @@ The timeout duration in seconds for QUIC handshakes to complete. If a connection
 
 The idle timeout duration in seconds for QUIC connections. This maps to the standard QUIC `max_idle_timeout` transport parameter. A connection will be closed if no traffic is sent or received within this timeframe. Use a higher value for applications that require long-lived idle connections (e.g., long-polling, WebSockets over HTTP/3).
 
+### H3AddressValidation
+
+**Syntax:** `H3AddressValidation on|off`
+**Context:** server config, virtual host
+**Default:** `on`
+
+Whether to validate a client's source address before accepting a connection. When on, the server answers each new connection with a QUIC Retry packet (RFC 9000 section 8.1.2) and completes the handshake only after the client echoes the token back, which proves the client can receive at the address it claims. This is the defence against address-spoofed amplification attacks.
+
+Turning it off removes one round trip from every connection, at the cost of that protection. Leave it on for internet-facing deployments. It exists mainly for interoperability testing, where a test may require a handshake that completes without an intervening Retry.
+
 ## VirtualHost Configuration
 
 ### Port Detection
