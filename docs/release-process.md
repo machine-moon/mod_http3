@@ -56,7 +56,7 @@ graph TD
    ./scripts/release.sh
    git push origin vX.Y.Z-rc1
    ```
-   Candidate tags carry an `-rcN` suffix, so they are tagged by hand; `scripts/release.sh` builds the artifacts locally so you can inspect them. Pushing the tag is what starts the workflow, and the workflow is the only thing that publishes a release — it re-checks the tag against `CMakeLists.txt`.
+   Candidate tags carry an `-rcN` suffix, so they are tagged by hand; `scripts/release.sh` builds the artifacts locally so you can inspect them. It also creates the bare `vX.Y.Z` tag from `CMakeLists.txt` — leave it, push only the `-rcN` tag, and step 5 will offer to move it onto the approved commit. Pushing the tag is what starts the workflow, and the workflow is the only thing that publishes a release — it re-checks the tag against `CMakeLists.txt`.
 
    The release carries these assets, each with a `.sha256` beside it:
    - `mod_http3-X.Y.Z.tar.gz` / `mod_http3-X.Y.Z.zip` — source snapshots (the authoritative release artifacts)
@@ -79,10 +79,10 @@ graph TD
 5. **Publish Approved Release**:
    Once the vote passes, create and push the final tag. The workflow rebuilds from that tag and publishes the release:
    ```sh
-   ./scripts/release.sh --tag
+   ./scripts/release.sh
    git push origin vX.Y.Z
    ```
-   `--tag` (`-t`) reads the version from `CMakeLists.txt` and creates the matching annotated `vX.Y.Z` tag before building.
+   `scripts/release.sh` reads the version from `CMakeLists.txt` and creates the matching annotated `vX.Y.Z` tag after the artifacts build, so a failed build leaves no tag behind. If that tag already exists it asks before overwriting it, and refuses outright when there is no terminal to ask on.
    A tag can only be published once. To redo a release, delete it as in step 4 and push the tag again.
 
 6. **Stage and Commit Site Updates**:

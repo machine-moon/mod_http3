@@ -2,9 +2,7 @@ import pytest
 
 
 class TestConnectionHeaders:
-    """Connection-specific response headers are forbidden in HTTP/3 field
-    sections (RFC 9114 §4.2); clients hard-fail streams that carry them.
-    mod_http3 must strip them no matter what handlers or config set."""
+    """RFC 9114 4.2 forbids connection-specific headers in HTTP/3, so mod_http3 must always strip them."""
 
     @pytest.fixture(autouse=True, scope="class")
     def _class_scope(self, env):

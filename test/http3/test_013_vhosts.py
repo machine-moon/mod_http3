@@ -2,8 +2,7 @@ import pytest
 
 
 class TestVhosts:
-    """Name-based virtual hosts must be selected from :authority over HTTP/3,
-    not pinned to the H3-enabled base vhost."""
+    """Name-based vhosts must be selected from :authority, not pinned to the H3-enabled base vhost."""
 
     @pytest.fixture(autouse=True, scope="class")
     def _class_scope(self, env):
