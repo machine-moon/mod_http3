@@ -1,14 +1,19 @@
+import asyncio
 import hashlib
 import os
+import ssl
 
 import pytest
 
+from aioquic.asyncio.client import connect
+from aioquic.h3.connection import H3_ALPN
+from aioquic.quic.configuration import QuicConfiguration
+
+from .test_008_stream_multiplexing import _MuxClient
+
 
 class TestLargeDownload:
-    """A response larger than the QUIC stream send buffer, pulled by a
-    rate-limited client, keeps the connection under write backpressure for
-    the whole transfer. The send path must block/unblock the stream instead
-    of spinning, and the payload must arrive intact."""
+    """A rate-limited pull of an oversized response must arrive intact under write backpressure."""
 
     PAYLOAD_SIZE = 2 * 1024 * 1024
 
@@ -41,3 +46,41 @@ class TestLargeDownload:
         assert r.exit_code == 0, r.stderr
         assert r.response["status"] == 200
         assert hashlib.sha256(r.response["body"]).hexdigest() == self.expected_sha256
+
+
+class TestFileBucketDownload:
+    """With EnableMMAP off apr_bucket_read splits the file bucket, and the filter must follow the tail."""
+
+    PAYLOAD_SIZE = 64 * 1024
+
+    @pytest.fixture(autouse=True, scope="class")
+    def _class_scope(self, env):
+        from .env import H3Conf
+
+        payload = os.urandom(self.PAYLOAD_SIZE)
+        with open(os.path.join(env.server_docs_dir, "nommap.bin"), "wb") as fd:
+            fd.write(payload)
+        type(self).expected_sha256 = hashlib.sha256(payload).hexdigest()
+
+        H3Conf(env).add_vhost_test1(extra_lines=["EnableMMAP Off"]).install()
+        assert env.apache_restart() == 0
+
+    def test_001_body_survives_the_bucket_split(self, env):
+        authority = f"test1.{env.http_tld}"
+
+        async def run():
+            config = QuicConfiguration(
+                is_client=True, alpn_protocols=H3_ALPN, verify_mode=ssl.CERT_NONE, server_name=authority
+            )
+            async with connect(
+                env.http_addr, env.https_port, configuration=config, create_protocol=_MuxClient
+            ) as client:
+                sid = client.start_get(authority, "/nommap.bin")
+                client.transmit()
+                await asyncio.wait_for(client.done[sid].wait(), timeout=15)
+                return client.status[sid], client.body[sid]
+
+        status, body = asyncio.run(run())
+        assert status == "200"
+        assert len(body) == self.PAYLOAD_SIZE
+        assert hashlib.sha256(body).hexdigest() == self.expected_sha256
