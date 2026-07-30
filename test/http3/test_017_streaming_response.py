@@ -73,8 +73,7 @@ class TestStreamingResponse:
         assert result.returncode != 0
         assert b"first-chunk\n" in result.stdout
 
-        # The rate-limited client leaves the producer blocked behind the
-        # bounded queue. Resetting the stream must wake that worker promptly.
+        # The producer is blocked behind the bounded queue; resetting the stream must wake it promptly.
         active_url = env.mkurl("https", "test1", "/h3-active-floods")
         deadline = time.monotonic() + 5
         while True:

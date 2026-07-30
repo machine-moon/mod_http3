@@ -4,9 +4,7 @@ import pytest
 
 
 class TestMaxResponseBody:
-    """H3MaxResponseBodySize bounds in-memory response buffering. It is an
-    opt-in safety valve (default: unlimited) so existing large-response
-    deployments are unaffected unless explicitly configured."""
+    """H3MaxResponseBodySize bounds in-memory buffering; an opt-in valve, unlimited by default."""
 
     @pytest.fixture(autouse=True, scope="class")
     def _class_scope(self, env):

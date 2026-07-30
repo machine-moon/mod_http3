@@ -2,8 +2,7 @@ import pytest
 
 
 class TestScheme:
-    """HTTP/3 requests must be treated as TLS by httpd: https scheme in
-    self-referential redirects and the standard TLS environment for scripts."""
+    """HTTP/3 requests must be treated as TLS: https in redirects, standard TLS env for scripts."""
 
     @pytest.fixture(autouse=True, scope="class")
     def _class_scope(self, env):
@@ -13,8 +12,7 @@ class TestScheme:
         assert env.apache_restart() == 0
 
     def test_001_redirect_keeps_https_scheme(self, env):
-        # mod_dir issues a self-referential redirect for a directory
-        # without a trailing slash; it must not downgrade to http://.
+        # mod_dir's self-referential redirect for a slashless directory must not downgrade to http://.
         url = env.mkurl("https", "test1", "/subdir")
         r = env.curl_get(url, options=["--http3-only", "-k"])
         assert r.exit_code == 0, r.stderr + r.stdout

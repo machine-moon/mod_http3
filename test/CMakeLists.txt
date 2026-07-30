@@ -46,7 +46,7 @@ list(JOIN DSO_MODULES " " DSO_MODULES)
 list(JOIN MPM_MODULES " " MPM_MODULES)
 
 # -- curl for the pytest clients --
-find_program(CURL_BIN NAMES curl HINTS "${CURL}" "${CURL}/.." "${CURL}/bin" "/opt/curl/bin" "/usr/bin" "/usr/local/bin" NO_DEFAULT_PATH)
+find_program(CURL_BIN NAMES curl HINTS "${CURL}" "${CURL}/.." "${CURL}/bin" "/opt/curl/bin" "/usr/bin" "/usr/local/bin" NO_DEFAULT_PATH NO_CACHE)
 if(NOT CURL_BIN)
   message(WARNING "[test] curl not found - pytest clients will use 'curl' from PATH at runtime")
   set(CURL_BIN "curl")

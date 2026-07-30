@@ -3,6 +3,14 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.46 (2026-07-30)
+--------------------
+  *) Fixed pytest to use -DCURL if provided.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Reworked scripts/release.sh.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.45 (2026-07-29)
 --------------------
   *) Stopped sending a body on HEAD responses.
