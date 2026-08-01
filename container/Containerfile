@@ -17,6 +17,7 @@ COPY cmake/ cmake/
 COPY CMakeLists.txt .
 COPY LICENSE NOTICE AUTHORS CHANGES ./
 COPY mod_http3/ mod_http3/
+COPY quic/ quic/
 
 RUN cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \

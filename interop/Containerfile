@@ -16,6 +16,7 @@ COPY dependencies/ dependencies/
 COPY cmake/ cmake/
 COPY CMakeLists.txt LICENSE ./
 COPY mod_http3/ mod_http3/
+COPY quic/ quic/
 
 RUN cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \

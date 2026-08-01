@@ -23,7 +23,7 @@
 
 #include <apr_atomic.h>
 
-#include <openssl/ssl.h>
+#include "quic.h"
 
 #include "h3_io.h"
 #include "h3_session.h"
@@ -48,20 +48,16 @@ void* APR_THREAD_FUNC quic_event_thread(apr_thread_t* thread, void* data)
             wait_for_event(io);
         }
         work_pending = 0;
-        SSL_handle_events(io->ssl_listener);
-        while (h3_io_has_buffered_datagrams(io))
+        if (quic_engine_pump(io->qengine))
         {
-            if (SSL_handle_events(io->ssl_listener) != 1)
-            {
-                break;
-            }
+            work_pending = 1;
         }
 
         if (io->thread_running)
         {
             for (;;)
             {
-                SSL* conn = SSL_accept_connection(io->ssl_listener, SSL_ACCEPT_CONNECTION_NO_BLOCK);
+                quic_conn* conn = quic_engine_accept_conn(io->qengine);
                 if (!conn)
                 {
                     break;
@@ -71,12 +67,12 @@ void* APR_THREAD_FUNC quic_event_thread(apr_thread_t* thread, void* data)
                 {
                     h3_server_conf* conf = ap_get_module_config(io->server->module_config, &http3_module);
                     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, io->server, "dropping QUIC connection: at H3MaxConnections limit (%u)", conf->h3_max_connections);
-                    SSL_free(conn);
+                    quic_conn_free(conn);
                     continue;
                 }
                 if (!prepare_accepted_connection(io, conn))
                 {
-                    SSL_free(conn);
+                    quic_conn_free(conn);
                 }
             }
             progress_pending_handshakes(io);
@@ -92,42 +88,8 @@ void* APR_THREAD_FUNC quic_event_thread(apr_thread_t* thread, void* data)
 
             if (session->aborted)
             {
-                int shutdown_done = 0;
-                int ret;
-                uint64_t flags = (!io->thread_running) ? SSL_SHUTDOWN_FLAG_RAPID : 0;
-                
-                if (session->ngh3_dead)
-                {
-                    SSL_SHUTDOWN_EX_ARGS args = {.quic_error_code = session->abort_quic_error_code, .quic_reason = session->abort_reason};
-                    ret = SSL_shutdown_ex(session->ssl_conn, flags, &args, sizeof(args));
-                }
-                else
-                {
-                    if (flags != 0)
-                    {
-                        SSL_SHUTDOWN_EX_ARGS args = {0};
-                        ret = SSL_shutdown_ex(session->ssl_conn, flags, &args, sizeof(args));
-                    }
-                    else
-                    {
-                        ret = SSL_shutdown(session->ssl_conn);
-                    }
-                }
-
-                if (ret == 1)
-                {
-                    shutdown_done = 1;
-                    session->aborted = 1;
-                }
-                else if (ret < 0)
-                {
-                    int err = SSL_get_error(session->ssl_conn, ret);
-                    if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE)
-                    {
-                        shutdown_done = 1;
-                        session->aborted = 1;
-                    }
-                }
+                int is_rapid = (!io->thread_running);
+                int shutdown_done = quic_conn_shutdown(session->qconn, is_rapid, session->abort_quic_error_code, session->ngh3_dead ? session->abort_reason : NULL);
 
                 if (shutdown_done && apr_atomic_read32(&session->active_tasks) == 0)
                 {
@@ -143,7 +105,7 @@ void* APR_THREAD_FUNC quic_event_thread(apr_thread_t* thread, void* data)
                     }
                     io->active_sessions->nelts--;
                     apr_atomic_dec32(&io->active_session_count);
-                    continue; /* Do not increment i, as we swapped the last element into this slot */
+                    continue;
                 }
             }
             i++;

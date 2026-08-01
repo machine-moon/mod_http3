@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(mod_http3 VERSION 0.0.47)
+project(mod_http3 VERSION 0.0.48)
 
 # -- Compiler and Build Type Checks --
 if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
@@ -60,16 +60,17 @@ include(helpers)
 include(flags)
 
 # -- Dependencies Library --
-add_library(${PROJECT_NAME}-deps INTERFACE)
 include(nghttp3)
 include(openssl)
 include(httpd)
+add_subdirectory(quic)
+add_library(${PROJECT_NAME}-deps INTERFACE)
 target_link_libraries(${PROJECT_NAME}-deps INTERFACE nghttp3 openssl httpd)
 
 # -- Core object library --
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS mod_http3/src/*.c)
 add_library(${PROJECT_NAME}-core OBJECT ${sources})
-target_link_libraries(${PROJECT_NAME}-core PUBLIC ${PROJECT_NAME}-deps)
+target_link_libraries(${PROJECT_NAME}-core PUBLIC ${PROJECT_NAME}-deps ${PROJECT_NAME}-quic)
 set_target_properties(${PROJECT_NAME}-core PROPERTIES C_VISIBILITY_PRESET hidden VISIBILITY_INLINES_HIDDEN ON)
 target_include_directories(${PROJECT_NAME}-core PUBLIC mod_http3/include)
 apply_target_flags(${PROJECT_NAME}-core)
@@ -77,7 +78,7 @@ apply_target_flags(${PROJECT_NAME}-core)
 # -- Dynamic Shared Object (DSO) --
 if(BUILD_MODULE)
   add_library(${PROJECT_NAME}-lib MODULE $<TARGET_OBJECTS:${PROJECT_NAME}-core>)
-  target_link_libraries(${PROJECT_NAME}-lib PRIVATE ${PROJECT_NAME}-deps)
+  target_link_libraries(${PROJECT_NAME}-lib PRIVATE ${PROJECT_NAME}-deps ${PROJECT_NAME}-quic)
 
   set_target_properties(${PROJECT_NAME}-lib PROPERTIES PREFIX "" OUTPUT_NAME "${PROJECT_NAME}")
   apply_target_flags(${PROJECT_NAME}-lib)

@@ -3,6 +3,11 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.48 (2026-08-01)
+--------------------
+  *) Abstracted to an in house QUIC provider.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.47 (2026-07-31)
 --------------------
   *) Added a QUIC Interop Runner endpoint and client matrix in CI.
