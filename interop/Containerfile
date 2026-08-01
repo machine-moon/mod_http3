@@ -1,0 +1,46 @@
+FROM martenseemann/quic-network-simulator-endpoint:latest AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential gcc-14 cmake ninja-build git pkg-config perl python3 \
+    autoconf automake libtool libtool-bin ca-certificates \
+    libpcre2-dev libxml2-dev libexpat1-dev zlib1g-dev \
+    liblua5.4-dev libbrotli-dev libnghttp2-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV CC=gcc-14
+ARG JOBS
+
+WORKDIR /src
+
+COPY dependencies/ dependencies/
+COPY cmake/ cmake/
+COPY CMakeLists.txt LICENSE ./
+COPY mod_http3/ mod_http3/
+
+RUN cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_MODULE=ON \
+    -DBUILD_EXAMPLES=OFF \
+    -DBUILD_TESTS=OFF \
+    -DDEPENDENCIES_PARALLEL="${JOBS:-$(nproc)}" \
+    && cmake --build build -j "${JOBS:-$(nproc)}"
+
+FROM martenseemann/quic-network-simulator-endpoint:latest AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpcre2-8-0 libxml2 libexpat1 zlib1g liblua5.4-0 libbrotli1 libnghttp2-14 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /src/dependencies/apr-dist/      /src/dependencies/apr-dist/
+COPY --from=builder /src/dependencies/apr-util-dist/ /src/dependencies/apr-util-dist/
+COPY --from=builder /src/dependencies/openssl-dist/  /src/dependencies/openssl-dist/
+COPY --from=builder /src/dependencies/nghttp3-dist/  /src/dependencies/nghttp3-dist/
+COPY --from=builder /src/dependencies/httpd-dist/    /src/dependencies/httpd-dist/
+COPY --from=builder /src/build/lib/mod_http3.so      /src/dependencies/httpd-dist/modules/mod_http3.so
+
+COPY interop/httpd.conf      /src/dependencies/httpd-dist/conf/httpd.conf
+COPY interop/run_endpoint.sh /run_endpoint.sh
+RUN chmod +x /run_endpoint.sh
+
+ENTRYPOINT [ "/run_endpoint.sh" ]

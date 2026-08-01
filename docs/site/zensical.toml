@@ -19,6 +19,7 @@ nav = [
   { "Getting Started" = [
     { "Build" = "build.md" },
     { "Deploy" = "deploy.md" },
+    { "Containers" = "containers.md" },
     { "Verify" = "verify.md" },
   ] },
   { "Configuration" = [
@@ -33,6 +34,7 @@ nav = [
     { "Browser" = "browser-testing.md" },
     { "curl" = "curl-testing.md" },
     { "Examples" = "examples-testing.md" },
+    { "QUIC Interop" = "interop.md" },
   ] },
   { "API Reference" = [
     { "Overview" = "api.md" },

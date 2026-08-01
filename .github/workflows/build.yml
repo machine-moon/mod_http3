@@ -1,0 +1,78 @@
+name: build
+
+on:
+  workflow_call:
+    outputs:
+      image:
+        description: Image this build published for the commit.
+        value: ${{ jobs.module.outputs.image }}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+jobs:
+  module:
+    name: module
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set up buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to ghcr
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: container/Containerfile
+          build-args: JOBS=4
+          tags: ${{ env.IMAGE }}
+          load: true
+          push: ${{ github.event_name != 'pull_request' }}
+          cache-from: type=gha,scope=module
+          cache-to: type=gha,scope=module,mode=max
+
+      - name: Check linkage
+        run: |
+          docker run --rm --entrypoint ldd "$IMAGE" \
+            /src/dependencies/httpd-dist/modules/mod_http3.so | tee ldd.txt
+          ! grep -q "not found" ldd.txt
+
+      - name: Build artifacts
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: container/Containerfile
+          build-args: JOBS=4
+          target: artifacts
+          outputs: type=local,dest=dist
+          cache-from: type=gha,scope=module
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+      - name: Export image ref
+        id: ref
+        run: echo "image=$IMAGE" >>"$GITHUB_OUTPUT"

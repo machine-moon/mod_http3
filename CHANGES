@@ -3,6 +3,17 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.47 (2026-07-31)
+--------------------
+  *) Added a QUIC Interop Runner endpoint and client matrix in CI.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Updated the container image to serve HTTP/3 on its own.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Reviewed GitHub Actions workflows.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.46 (2026-07-30)
 --------------------
   *) Fixed pytest to use -DCURL if provided.

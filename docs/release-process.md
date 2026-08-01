@@ -28,7 +28,7 @@ For a release candidate to be officially published:
 
 ## 3. Release Workflow
 
-Pushing a `v*` tag publishes the release. The [Release workflow](../.github/workflows/release.yml) checks out the tag, runs `scripts/release.sh`, and uploads `build-release/dist/` to a GitHub release named after the tag. An `-rcN` tag is published as a draft prerelease; a bare `vX.Y.Z` tag as a normal release.
+Pushing a `v*` tag runs the [CI pipeline](../.github/workflows/ci.yml) against the tagged tree. Only once build, test, interop and pages have all passed does the [release stage](../.github/workflows/release.yml) run, and all it does is publish what those stages already produced: it retags the images, deploys the site, and uploads the build artifacts to a GitHub release named after the tag. An `-rcN` tag is published as a draft prerelease; a bare `vX.Y.Z` tag as a normal release.
 
 ```mermaid
 graph TD
@@ -102,7 +102,7 @@ gh release download vX.Y.Z --pattern 'mod_http3-X.Y.Z.tar.gz*'
 sha256sum --check mod_http3-X.Y.Z.tar.gz.sha256
 ```
 
-Provenance comes from the release itself: the assets are built by the [Release workflow](../.github/workflows/release.yml) from the tagged tree, and the run linked on the release page shows the exact commit and build log.
+Provenance comes from the release itself: the assets are built by the [CI pipeline](../.github/workflows/ci.yml) from the tagged tree, and the run linked on the release page shows the exact commit and build log.
 
 ---
 
