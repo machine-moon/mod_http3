@@ -1,28 +1,57 @@
 FROM debian:trixie AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake git pkg-config python3 perl \
+    build-essential cmake ninja-build git pkg-config python3 perl \
     libpcre2-dev libxml2-dev libexpat1-dev zlib1g-dev \
     liblua5.4-dev libbrotli-dev libnghttp2-dev \
     autoconf automake libtool libtool-bin ca-certificates \
+    dpkg-dev rpm \
     && rm -rf /var/lib/apt/lists/*
+
+ARG JOBS
 
 WORKDIR /src
 
 COPY dependencies/ dependencies/
 COPY cmake/ cmake/
 COPY CMakeLists.txt .
-COPY LICENSE .
+COPY LICENSE NOTICE AUTHORS CHANGES ./
 COPY mod_http3/ mod_http3/
 
-RUN cmake -B build \
+RUN cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_MODULE=ON \
     -DBUILD_EXAMPLES=OFF \
     -DBUILD_TESTS=OFF \
-    -DDEPENDENCIES_PARALLEL=6
+    -DDEPENDENCIES_PARALLEL="${JOBS:-$(nproc)}"
 
-RUN cmake --build build -j8
+COPY . .
+
+RUN cmake --build build --target release -j "${JOBS:-$(nproc)}" \
+    && rm -rf build/dist/_CPack_Packages
+
+FROM builder AS tester
+
+ARG JOBS
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv /venv \
+    && /venv/bin/pip install --no-cache-dir -r test/requirements.txt
+
+ENV PATH=/venv/bin:$PATH
+
+RUN sh scripts/mkcert.sh test/certs
+
+RUN cmake -B build -DBUILD_TESTS=ON \
+    && cmake --build build -j "${JOBS:-$(nproc)}"
+
+WORKDIR /src/test
+
+FROM scratch AS artifacts
+COPY --from=builder /src/build/dist/ /
 
 FROM debian:trixie-slim AS runtime
 
@@ -39,9 +68,13 @@ COPY --from=builder /src/dependencies/nghttp3-dist/ /src/dependencies/nghttp3-di
 COPY --from=builder /src/dependencies/httpd-dist/  /src/dependencies/httpd-dist/
 COPY --from=builder /src/build/lib/mod_http3.so /src/dependencies/httpd-dist/modules/mod_http3.so
 
-RUN mkdir -p /src/dependencies/httpd-dist/conf/certs
+COPY container/httpd.conf    /src/dependencies/httpd-dist/conf/httpd.conf
+COPY container/static/       /src/dependencies/httpd-dist/htdocs/
+COPY container/entrypoint.sh /entrypoint.sh
+
+RUN mkdir -p /src/dependencies/httpd-dist/conf/certs && chmod +x /entrypoint.sh
 
 EXPOSE 8443/tcp
 EXPOSE 8443/udp
 
-CMD ["/src/dependencies/httpd-dist/bin/httpd", "-D", "FOREGROUND", "-f", "/src/dependencies/httpd-dist/conf/httpd.conf"]
+ENTRYPOINT ["/entrypoint.sh"]

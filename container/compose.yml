@@ -9,9 +9,11 @@ services:
       - "8443:8443/tcp"   # HTTP/1.1 and HTTP/2
       - "8443:8443/udp"   # HTTP/3
     volumes:
-      - ./httpd.conf:/src/dependencies/httpd-dist/conf/httpd.conf:ro
-      - ./certs:/src/dependencies/httpd-dist/conf/certs:ro
-      - ./static:/src/dependencies/httpd-dist/htdocs:ro
+      # Optionally override the default configuration and certificates by mounting your own files.
+      #
+      # - ./httpd.conf:/src/dependencies/httpd-dist/conf/httpd.conf:ro
+      # - ./certs:/src/dependencies/httpd-dist/conf/certs:ro
+      # - ./static:/src/dependencies/httpd-dist/htdocs:ro
     healthcheck:
       test: ["CMD", "curl", "--http3", "-ksSf", "https://localhost:8443/"]
       interval: 120s

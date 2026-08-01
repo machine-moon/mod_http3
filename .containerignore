@@ -1,4 +1,6 @@
+.git/
+.ai/
 dependencies/*-dist/
-build/
+build*/
 keys/
 certs/

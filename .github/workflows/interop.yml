@@ -1,0 +1,155 @@
+name: interop
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}-interop:${{ github.sha }}
+  RUNNER: quic-interop/quic-interop-runner
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    outputs:
+      clients: ${{ steps.clients.outputs.list }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set up buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build endpoint
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: interop/Containerfile
+          build-args: JOBS=4
+          tags: ${{ env.IMAGE }}
+          load: true
+          cache-from: type=gha,scope=interop
+          cache-to: type=gha,scope=interop,mode=max
+
+      - name: Check exit 127
+        run: |
+          rc=0
+          timeout 120 docker run --rm -e ROLE=server -e TESTCASE=bogus "$IMAGE" || rc=$?
+          test "$rc" -eq 127
+
+      - name: Publish endpoint
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: interop/Containerfile
+          build-args: JOBS=4
+          tags: ${{ env.IMAGE }}
+          push: true
+          cache-from: type=gha,scope=interop
+
+      - name: List clients
+        id: clients
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          list=$(gh api "repos/$RUNNER/contents/implementations_quic.json" \
+                 -H "Accept: application/vnd.github.raw" |
+                 jq -c '[to_entries[] | select(.value.role != "server") | .key]')
+          echo "list=$list" | tee -a "$GITHUB_OUTPUT"
+
+  test:
+    name: test (${{ matrix.client }})
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        client: ${{ fromJson(needs.build.outputs.clients) }}
+    env:
+      CLIENT: ${{ matrix.client }}
+
+    steps:
+      - name: Checkout runner
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.RUNNER }}
+
+      - name: Set up docker
+        uses: docker/setup-docker-action@v5
+        with:
+          version: version=v28.3.0
+
+      - name: Log in to ghcr
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install runner
+        run: pip install -r requirements.txt
+
+      - name: Install tshark
+        run: |
+          sudo add-apt-repository -y ppa:wireshark-dev/nightly
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tshark
+          sudo modprobe ip6table_filter
+
+      - name: Register endpoint
+        run: |
+          jq --arg image "$IMAGE" --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+             '. + {mod_http3: {image: $image, role: "server", url: $url}}' \
+             implementations_quic.json >impls.json
+          mv impls.json implementations_quic.json
+
+      - name: Pull images
+        run: |
+          docker pull "$IMAGE"
+          python pull.py -i "$CLIENT"
+
+      - name: Run matrix
+        continue-on-error: true
+        run: python run.py -s mod_http3 -c "$CLIENT" -t http3 -l logs -j results.json
+
+      - name: Report verdict
+        run: |
+          result=$(jq -r '.results[0][0].result' results.json)
+          echo "### $CLIENT — \`$result\`" >>"$GITHUB_STEP_SUMMARY"
+          case $result in
+            succeeded)   ;;
+            unsupported) echo "::warning title=$CLIENT::the client has no http3 test case" ;;
+            *)           echo "::error title=$CLIENT::http3 $result"; exit 1 ;;
+          esac
+
+      - name: Keep logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: interop-logs-${{ matrix.client }}
+          path: logs/
+          retention-days: 14
