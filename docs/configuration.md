@@ -36,7 +36,7 @@ By default, CMake builds all dependencies from their submodules at configure tim
 Build order:
 
 1. nghttp3 -> `dependencies/nghttp3-dist/`
-2. OpenSSL -> `dependencies/openssl-dist/`
+2. OpenSSL -> `quic/third-party/openssl-dist/`
 3. APR -> `dependencies/apr-dist/`
 4. APR-util -> `dependencies/apr-util-dist/`
 5. httpd -> `dependencies/httpd-dist/`
@@ -44,7 +44,7 @@ Build order:
 Force a rebuild:
 
 ```sh
-rm -rf dependencies/openssl-dist
+rm -rf quic/third-party/openssl-dist
 cmake -B build
 ```
 
@@ -106,7 +106,7 @@ cmake --build build --target tests
 
 ### Sentinel Files
 
-Each dependency built from source writes `.done` to its output directory (e.g., `dependencies/openssl-dist/.done`). CMake checks for this file before rebuilding. Delete it to force rebuild.
+Each dependency built from source writes `.done` to its output directory (e.g., `quic/third-party/openssl-dist/.done`). CMake checks for this file before rebuilding. Delete it to force rebuild.
 
 ### Build Logs
 
@@ -121,11 +121,11 @@ Build logs are written to `dependencies/<dep>-dist/logs/`:
 Apply patch, remove build output, reconfigure:
 
 ```sh
-cd dependencies/openssl
+cd quic/third-party/openssl
 git apply /path/to/my.patch
 cd ../..
 
-rm -rf dependencies/openssl-dist
+rm -rf quic/third-party/openssl-dist
 cmake -B build
 ```
 
@@ -138,5 +138,5 @@ dependencies/httpd-dist/bin/apxs -q HTTPD_MMN       # expect 20211221
 
 # Confirm OpenSSL is the one httpd links
 ldd dependencies/httpd-dist/modules/mod_ssl.so | grep ssl
-# should show dependencies/openssl-dist/lib64/libssl.so
+# should show quic/third-party/openssl-dist/lib64/libssl.so
 ```

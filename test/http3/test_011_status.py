@@ -1,3 +1,4 @@
+import os
 import pytest
 import json
 from .env import H3Conf
@@ -24,6 +25,7 @@ class TestStatus:
         assert r.response["status"] == 200
 
         stats = json.loads(r.response["body"])
+        assert stats["quic_backend"] == os.environ.get("H3_QUIC_ENGINE", "openssl")
         assert "live_workers" in stats
         assert "total_connections" in stats
         assert "total_streams" in stats

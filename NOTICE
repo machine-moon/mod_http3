@@ -30,6 +30,12 @@ This product makes use of the following third-party libraries:
   Copyright 2019-2026 nghttp3 contributors
   Licensed under the MIT License.
 
+  ngtcp2 (https://github.com/ngtcp2/ngtcp2)
+  Copyright 2016-2026 ngtcp2 contributors
+  Licensed under the MIT License.
+  Built only when the ngtcp2 QUIC engine is enabled (-DENABLE_NGTCP2=ON),
+  together with libngtcp2_crypto_ossl for its TLS integration.
+
   OpenSSL (https://www.openssl.org/)
   Copyright 1998-2026 The OpenSSL Project Authors
   Licensed under the Apache License 2.0.

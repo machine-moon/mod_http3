@@ -9,7 +9,8 @@ Status: **experimental**.
 Default build compiles all dependencies (OpenSSL, APR, APR-util, httpd) from submodules:
 
 ```sh
-git submodule update --init --recursive
+git submodule update --init
+git submodule update --init --recursive dependencies/nghttp3
 cmake -B build
 cmake --build build
 ```

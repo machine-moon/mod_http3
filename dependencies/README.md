@@ -2,23 +2,30 @@
 
 mod_http3 uses **git submodules** for all dependencies. By default, all dependencies are built from source at configure time. Provide `WITH_*` CMake variables to override with system-installed versions.
 
+This directory holds what every build needs. **Optional QUIC libraries live under
+[`quic/third-party/`](../quic/third-party) instead**, beside the engines that use
+them — today that is ngtcp2. OpenSSL stays here: it is always required, since it
+provides TLS whichever QUIC engine runs.
+
 ---
 
 ## Pinned dependency versions
 
 | Dependency  | Submodule path              | Branch          | Version (current) | Notes                          |
 |-------------|-----------------------------|-----------------|-------------------|--------------------------------|
-| OpenSSL     | `dependencies/openssl`      | `openssl-3.5`   | 3.5.7-dev         | QUIC support required (≥ 3.5). |
+| OpenSSL     | `quic/third-party/openssl`      | `openssl-3.5`   | 3.5.7-dev         | QUIC support required (≥ 3.5). |
 | httpd       | `dependencies/httpd`        | `trunk`         | 2.5.1-dev         | AP25 API; requires MMN ≥ 20211221/30. |
 | APR         | `dependencies/apr`          | `1.7.x`         | 1.7.7             | APR v2-dev (trunk) will subsume APR-util 1.x APIs. |
 | APR-util    | `dependencies/apr-util`     | `1.6.x`         | 1.6.4             | Legacy companion library; kept for APR 1.x compatibility. |
 | nghttp3     | `dependencies/nghttp3`      | `main`          | 1.17.0            | HTTP/3 framing and QPACK.      |
+| ngtcp2      | `quic/third-party/ngtcp2`  | `main` (v1.25.0)| 1.25.0            | QUIC transport; built only for `-DENABLE_NGTCP2=ON`. |
 
 All submodules are shallow (`shallow = true`). Initialise them once:
 
 ```sh
-git submodule sync --recursive
-git submodule update --init --recursive
+git submodule sync
+git submodule update --init
+git submodule update --init --recursive dependencies/nghttp3
 ```
 
 ---
@@ -47,10 +54,11 @@ CMake builds OpenSSL, APR, APR-util, httpd, and nghttp3 from their respective gi
 
 **Build order enforced by CMake:**
 1. nghttp3 (`dependencies/nghttp3`) -> `dependencies/nghttp3-dist/`
-2. OpenSSL (`dependencies/openssl`) -> `dependencies/openssl-dist/`
+2. OpenSSL (`quic/third-party/openssl`) -> `quic/third-party/openssl-dist/`
 3. APR (`dependencies/apr`) -> `dependencies/apr-dist/`
 4. APR-util (`dependencies/apr-util`) -> `dependencies/apr-util-dist/`
 5. httpd (`dependencies/httpd`) -> `dependencies/httpd-dist/`
+6. ngtcp2 (`quic/third-party/ngtcp2`) -> `quic/third-party/ngtcp2-dist/` (only when the ngtcp2 QUIC engine is selected; it consumes the OpenSSL built above)
 
 ```sh
 # default: builds all dependencies from source (first configure is slow; subsequent ones are instant from cache)
@@ -63,7 +71,7 @@ This is the recommended mode for development. Everything is self-contained under
 **To force a clean rebuild of a dependency built from source**, delete its `-dist` dir and re-configure:
 
 ```sh
-rm -rf dependencies/openssl-dist   # re-build OpenSSL
+rm -rf quic/third-party/openssl-dist   # re-build OpenSSL
 rm -rf dependencies/httpd-dist     # re-build httpd
 cmake -B build
 ```
@@ -81,6 +89,7 @@ Provide `WITH_*` paths to use system-installed dependencies instead of building 
 | `WITH_APR=/path` | APR source build | >= 1.7.0 |
 | `WITH_APU=/path` | APR-util source build | >= 1.6.0 |
 | `WITH_NGHTTP3=/path` | nghttp3 source build | ≥ 1.16.0 |
+| `WITH_NGTCP2=/path` | ngtcp2 source build | ≥ 1.25.0 |
 
 ```sh
 cmake -B build -DWITH_SSL=/opt/openssl -DWITH_HTTPD=/opt/httpd
@@ -126,12 +135,12 @@ cmake -B build -DWITH_HTTPD=/opt/httpd
 If you need to patch OpenSSL, httpd, or APR/APU, apply the patch to the corresponding submodule and **remove any existing build output** before reconfiguring. Build-from-source mode will then rebuild from the patched sources.
 
 ```sh
-cd dependencies/openssl
+cd quic/third-party/openssl
 git apply /path/to/my.patch
 cd ../..
 
 # ensure the previous build output is discarded
-rm -rf dependencies/openssl-dist
+rm -rf quic/third-party/openssl-dist
 
 cmake -B build # External autotool builds happen at configuration time
 ```
@@ -149,12 +158,12 @@ The following are the exact configure/build commands CMake runs for each depende
 
 ### 1. OpenSSL (>= 3.5.0)
 
-Submodule: `dependencies/openssl` | cmake module: `cmake/modules/openssl.cmake`
+Submodule: `quic/third-party/openssl` | cmake module: `cmake/modules/openssl.cmake`
 
 Uses OpenSSL's own `./config` wrapper (not autoconf).
 
 ```sh
-cd dependencies/openssl
+cd quic/third-party/openssl
 
 ./config \
   --prefix=$PREFIX \
@@ -279,6 +288,38 @@ Hook up: `-DWITH_NGHTTP3=$PREFIX`
 
 ---
 
+---
+
+### 6. ngtcp2 (>= 1.25.0, only for `-DENABLE_NGTCP2=ON`)
+
+Submodule: `quic/third-party/ngtcp2` | cmake module: `cmake/modules/ngtcp2.cmake`
+
+The in-tree build uses ngtcp2's autotools, so it needs `autoconf`, `automake`
+and `libtool` on the host. The recipe below uses ngtcp2's own CMake instead,
+which does not. Either way it consumes the OpenSSL built above, so build that
+first; OpenSSL remains the TLS provider on both engines, and ngtcp2 replaces
+only the transport.
+
+```sh
+cmake -B quic/third-party/ngtcp2/build -S quic/third-party/ngtcp2 \
+  -DCMAKE_INSTALL_PREFIX=$PREFIX \
+  -DENABLE_OPENSSL=ON \
+  -DENABLE_LIB_ONLY=ON \
+  -DOPENSSL_ROOT_DIR=$OPENSSL_PREFIX
+
+cmake --build quic/third-party/ngtcp2/build -j$(nproc)
+cmake --install quic/third-party/ngtcp2/build
+```
+
+Produces both `libngtcp2` and `libngtcp2_crypto_ossl`; the module needs both. A
+distribution ngtcp2 built against the quictls fork ships
+`libngtcp2_crypto_quictls` instead and will not work.
+
+Hook up: `-DWITH_NGTCP2=$PREFIX`
+
+
+---
+
 ## Verifying a build-from-source install
 
 ```sh
@@ -288,8 +329,11 @@ dependencies/httpd-dist/bin/apxs -q HTTPD_MMN       # expect 20211221
 
 # Confirm OpenSSL is the one httpd links
 ldd dependencies/httpd-dist/modules/mod_ssl.so | grep ssl
-# should show dependencies/openssl-dist/lib64/libssl.so, not /usr/lib/...
+# should show quic/third-party/openssl-dist/lib64/libssl.so, not /usr/lib/...
 
 # Confirm nghttp3 version
 grep 'NGHTTP3_VERSION ' dependencies/nghttp3-dist/include/nghttp3/version.h
+
+# Confirm ngtcp2 version (only when the ngtcp2 engine is selected)
+grep 'NGTCP2_VERSION ' quic/third-party/ngtcp2-dist/include/ngtcp2/version.h
 ```

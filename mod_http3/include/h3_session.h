@@ -136,6 +136,15 @@ apr_status_t h3_session_create(h3_session** psession, server_rec* s, quic_conn* 
 apr_status_t h3_session_create_control_streams(h3_session* session);
 
 /**
+ * Report bytes the peer acknowledged on a stream. Called by engines that carry
+ * real acknowledgements; takes the session lock itself.
+ * @param session   The owning session.
+ * @param stream_id The stream the acknowledgement is for.
+ * @param datalen   Number of application bytes acknowledged.
+ */
+void h3_session_on_stream_acked(void* user, int64_t stream_id, uint64_t datalen);
+
+/**
  * Tear down a session: stops the SSL object, frees the nghttp3 connection,
  * and destroys the session pool. Safe to call with NULL.
  * @param session The session to destroy (may be NULL).

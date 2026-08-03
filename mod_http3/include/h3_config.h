@@ -40,6 +40,7 @@ struct h3_server_conf
 
     const char* h3_cert_path;
     const char* h3_key_path;
+    const char* h3_quic_engine;
     apr_port_t h3_port;
     apr_uint32_t h3_max_concurrent_streams;
     apr_uint32_t h3_max_connections;

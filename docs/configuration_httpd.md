@@ -127,6 +127,16 @@ Whether to validate a client's source address before accepting a connection. Whe
 
 Turning it off removes one round trip from every connection, at the cost of that protection. Leave it on for internet-facing deployments. It exists mainly for interoperability testing, where a test may require a handshake that completes without an intervening Retry.
 
+### H3QuicEngine
+
+**Syntax:** `H3QuicEngine openssl|ngtcp2`
+**Context:** server config, virtual host
+**Default:** `openssl`
+
+Which QUIC transport carries HTTP/3. `openssl` uses OpenSSL 3.5's own QUIC implementation and is always available. `ngtcp2` is present only when the module was built with `-DENABLE_NGTCP2=ON`; naming an engine the build does not contain is a fatal configuration error, so httpd refuses to start rather than quietly serving on the other one. OpenSSL provides TLS on both paths, so there is only ever one TLS stack in the process.
+
+The engine in use is reported by the `http3-status` handler as `quic_backend`.
+
 ## VirtualHost Configuration
 
 ### Port Detection

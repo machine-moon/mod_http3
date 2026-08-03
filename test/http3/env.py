@@ -88,6 +88,7 @@ class H3Conf(HttpdConf):
         h3_handshake_timeout=None,
         h3_idle_timeout=None,
         h3_address_validation=None,
+        h3_quic_engine=None,
         extra_lines=None
     ):
         self.start_vhost(
@@ -124,6 +125,9 @@ class H3Conf(HttpdConf):
         if h3_address_validation is not None:
             val = "on" if h3_address_validation is True else ("off" if h3_address_validation is False else h3_address_validation)
             self.add(f"H3AddressValidation {val}")
+        engine = h3_quic_engine or os.environ.get("H3_QUIC_ENGINE")
+        if engine:
+            self.add(f"H3QuicEngine {engine}")
 
         self.add("Protocols h3 http/1.1")
         for line in extra_lines or []:

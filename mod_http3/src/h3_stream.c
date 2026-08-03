@@ -134,11 +134,15 @@ void flush_nghttp3(h3_session* session)
         }
         if (res.blocked)
         {
-            /* Send buffer full: skip this stream instead of busy-looping on the same vec. */
             if (!h3s->write_blocked)
             {
                 h3s->write_blocked = 1;
                 session->blocked_streams++;
+                nghttp3_conn_block_stream(session->ngh3, sid);
+            }
+            else if (!ops->caps.acks_are_write_offsets)
+            {
+                /* A stale flag would otherwise spin this loop on the same vec. */
                 nghttp3_conn_block_stream(session->ngh3, sid);
             }
             continue;

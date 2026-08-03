@@ -36,4 +36,9 @@ void run_dependencies_suite(void)
 
     extern void run_openssl_tests(void);
     run_openssl_tests();
+
+#ifdef H3_ENABLE_NGTCP2
+    extern void run_ngtcp2_tests(void);
+    run_ngtcp2_tests();
+#endif
 }

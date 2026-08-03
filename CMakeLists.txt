@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(mod_http3 VERSION 0.0.48)
+project(mod_http3 VERSION 0.0.49)
 
 # -- Compiler and Build Type Checks --
 if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
@@ -32,6 +32,12 @@ set(DEPENDENCIES_DIRECTORY "${CMAKE_SOURCE_DIR}/dependencies" CACHE PATH "Direct
 set(DEPENDENCIES_OUTPUT_DIRECTORY "${DEPENDENCIES_DIRECTORY}" CACHE PATH "Directory for placing built dependencies")
 set(DEPENDENCIES_PARALLEL 6 CACHE STRING "Number of parallel jobs to use when building dependencies")
 
+# QUIC's own libraries, vendored beside the engines that need them.
+set(QUIC_DEPENDENCIES_DIRECTORY "${CMAKE_SOURCE_DIR}/quic/third-party"
+    CACHE PATH "Directory holding the QUIC library submodules")
+set(QUIC_DEPENDENCIES_OUTPUT_DIRECTORY "${QUIC_DEPENDENCIES_DIRECTORY}"
+    CACHE PATH "Directory the QUIC libraries are built into")
+
 # -- C standard --
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -42,11 +48,14 @@ option(BUILD_MODULE "Build Apache DSO module" ON)
 option(BUILD_EXAMPLES "Build example programs" ON)
 option(BUILD_TESTS "Build test suite" ON)
 
+option(ENABLE_NGTCP2 "Include the ngtcp2 QUIC engine" OFF)
+
 option(ENABLE_UBSAN "Undefined Behavior Sanitizer" OFF)
 option(ENABLE_ASAN "Address Sanitizer" OFF)
 option(ENABLE_WERROR "Treat warnings as errors" OFF)
 
 set(WITH_NGHTTP3 "" CACHE PATH "Path to nghttp3 installation prefix")
+set(WITH_NGTCP2 "" CACHE PATH "Path to ngtcp2 installation prefix")
 set(WITH_SSL "" CACHE PATH "Path to OpenSSL installation prefix")
 set(WITH_HTTPD "" CACHE PATH "Path to httpd installation prefix (includes APR/APU)")
 set(WITH_APR "" CACHE PATH "Path to APR installation prefix")
@@ -120,6 +129,8 @@ message(STATUS "")
 message(STATUS "  BUILD_MODULE   : ${BUILD_MODULE}")
 message(STATUS "  BUILD_EXAMPLES : ${BUILD_EXAMPLES}")
 message(STATUS "  BUILD_TESTS    : ${BUILD_TESTS}")
+message(STATUS "")
+message(STATUS "  ENABLE_NGTCP2  : ${ENABLE_NGTCP2}")
 message(STATUS "")
 message(STATUS "  ENABLE_UBSAN   : ${ENABLE_UBSAN}")
 message(STATUS "  ENABLE_ASAN    : ${ENABLE_ASAN}")

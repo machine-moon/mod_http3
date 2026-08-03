@@ -21,7 +21,7 @@ if(WITH_HTTPD)
 else()
   # httpd depends on openssl
   if(NOT WITH_SSL)
-    require_initialized_submodule("${DEPENDENCIES_DIRECTORY}/openssl")
+    require_initialized_submodule("${QUIC_DEPENDENCIES_DIRECTORY}/openssl")
     if(NOT OPENSSL_OUTPUT_DIRECTORY OR NOT EXISTS "${OPENSSL_OUTPUT_DIRECTORY}/.done" OR NOT TARGET openssl)
       message(FATAL_ERROR "[httpd] error: building httpd from source requires openssl to be built first")
     endif()

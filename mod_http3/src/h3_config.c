@@ -34,7 +34,9 @@
 #include "h3.h"
 #include "h3_check.h"
 #include "h3_config.h"
+#include "h3_quic.h"
 #include "mod_http3.h"
+#include "quic.h"
 
 apr_port_t get_server_port(const server_rec* s)
 {
@@ -61,6 +63,7 @@ void* h3_merge_server_config(apr_pool_t* p, void* base_conf, void* new_conf)
 
     merged->h3_cert_path = new->h3_cert_path ? new->h3_cert_path : base->h3_cert_path;
     merged->h3_key_path = new->h3_key_path ? new->h3_key_path : base->h3_key_path;
+    merged->h3_quic_engine = new->h3_quic_engine ? new->h3_quic_engine : base->h3_quic_engine;
     merged->h3_port = new->h3_port ? new->h3_port : base->h3_port;
     merged->h3_max_concurrent_streams = new->h3_max_concurrent_streams ? new->h3_max_concurrent_streams : base->h3_max_concurrent_streams;
     merged->h3_max_connections = new->h3_max_connections ? new->h3_max_connections : base->h3_max_connections;
@@ -103,6 +106,11 @@ static const char* set_h3_cert_path(cmd_parms* cmd, void* /*dummy*/, const char*
 static const char* set_h3_key_path(cmd_parms* cmd, void* /*dummy*/, const char* arg)
 {
     return set_string(cmd, arg, (const char*)offsetof(h3_server_conf, h3_key_path));
+}
+
+static const char* set_h3_quic_engine(cmd_parms* cmd, void* /*dummy*/, const char* arg)
+{
+    return set_string(cmd, arg, (const char*)offsetof(h3_server_conf, h3_quic_engine));
 }
 
 static const char* set_h3_port(cmd_parms* cmd, void* /*dummy*/, const char* arg)
@@ -423,6 +431,12 @@ int h3_post_config(apr_pool_t* /*p*/, apr_pool_t* /*plog*/, apr_pool_t* ptemp, s
 
     CHECK(conf && conf->h3_cert_path && conf->h3_key_path, return HTTP_INTERNAL_SERVER_ERROR;);
 
+    if (conf->h3_quic_engine && !quic_select(conf->h3_quic_engine))
+    {
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: H3QuicEngine %s: this build has no such engine (compiled: %s). Rebuild with -DENABLE_NGTCP2=ON.", conf->h3_quic_engine, quic_engine_names(ptemp));
+        return HTTP_INTERNAL_SERVER_ERROR;
+    }
+
     /* Validate cert and key files are readable */
     apr_file_t* f = NULL;
     if (apr_file_open(&f, conf->h3_cert_path, APR_READ, APR_OS_DEFAULT, ptemp) != APR_SUCCESS)
@@ -471,5 +485,7 @@ const command_rec cmd_11 = AP_INIT_TAKE1("H3IdleTimeout", set_h3_idle_timeout, N
 const command_rec cmd_12 = AP_INIT_TAKE1("H3MaxResponseBodySize", set_h3_max_response_body_size, NULL, RSRC_CONF, "Maximum HTTP/3 response body size in bytes; an explicit limit enables bounded whole-response buffering (default: unlimited streaming)");
 const command_rec cmd_13 = AP_INIT_FLAG("H3AddressValidation", set_h3_address_validation, NULL, RSRC_CONF, "Whether to validate client addresses with a QUIC Retry packet before accepting a connection (default: on)");
 
+const command_rec cmd_14 = AP_INIT_TAKE1("H3QuicEngine", set_h3_quic_engine, NULL, RSRC_CONF, "QUIC engine to run, among those compiled in (default: openssl)");
+
 const command_rec cmd_end = AP_INIT_TAKE1(NULL, NULL, NULL, RSRC_CONF, NULL);
-const command_rec h3_cmds[] = {cmd_1, cmd_2, cmd_3, cmd_4, cmd_5, cmd_6, cmd_7, cmd_8, cmd_9, cmd_10, cmd_11, cmd_12, cmd_13, cmd_end};
+const command_rec h3_cmds[] = {cmd_1, cmd_2, cmd_3, cmd_4, cmd_5, cmd_6, cmd_7, cmd_8, cmd_9, cmd_10, cmd_11, cmd_12, cmd_13, cmd_14, cmd_end};

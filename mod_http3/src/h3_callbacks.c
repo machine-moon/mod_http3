@@ -140,6 +140,8 @@ int on_recv_data(nghttp3_conn* /*conn*/, int64_t stream_id, const uint8_t* data,
     {
         return 0;
     }
+    /* nghttp3 excludes DATA payload from its consumed count; credit it here. */
+    quic_stream_consumed(stream->qstream, datalen);
     if (stream->request_body_overflow)
     {
         /* Discard over-budget bytes. */
@@ -183,11 +185,23 @@ int on_recv_data(nghttp3_conn* /*conn*/, int64_t stream_id, const uint8_t* data,
 
 int on_acked_stream_data(nghttp3_conn* conn, int64_t stream_id, uint64_t datalen, void* user_data, void* stream_user_data)
 {
-    /* OpenSSL QUIC exposes no ACK offsets; bytes accepted by SSL_write_ex count as acked. */
     (void)conn;
     (void)stream_id;
     (void)user_data;
     h3_stream_response_ack_locked((h3_stream*)stream_user_data, datalen);
+    return 0;
+}
+
+int on_deferred_consume(nghttp3_conn* conn, int64_t stream_id, size_t consumed, void* user_data, void* stream_user_data)
+{
+    (void)conn;
+    (void)stream_id;
+    (void)user_data;
+    h3_stream* stream = stream_user_data;
+    if (stream && stream->qstream)
+    {
+        quic_stream_consumed(stream->qstream, consumed);
+    }
     return 0;
 }
 

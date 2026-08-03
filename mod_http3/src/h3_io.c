@@ -63,6 +63,12 @@ static void teardown(h3_io_t* io)
     if (io->event_thread)
     {
         io->thread_running = 0;
+        if (io->wakeup_pipe[1])
+        {
+            char wake = '1';
+            apr_size_t len = 1;
+            (void)apr_file_write(io->wakeup_pipe[1], &wake, &len);
+        }
         apr_status_t status;
         apr_thread_join(&status, io->event_thread);
         io->event_thread = NULL;
@@ -132,6 +138,7 @@ apr_status_t h3_io_listen_start(apr_pool_t* pchild, server_rec* s, h3_server_con
         .key_path = conf->h3_key_path,
         .address_validation = (conf->h3_address_validation != H3_FLAG_OFF),
         .idle_timeout_secs = (uint32_t)conf->h3_idle_timeout,
+        .on_stream_acked = h3_session_on_stream_acked,
     };
     io->qengine = quic_engine_create(&qcfg, udp_fd, qerr, sizeof(qerr));
     if (!io->qengine)
@@ -261,6 +268,7 @@ static apr_status_t spawn_serviced_session(h3_io_t* io, quic_conn* conn)
         apr_pool_destroy(session_pool);
         return APR_EGENERAL;
     }
+    quic_conn_set_user(conn, session);
     if (h3_session_create_control_streams(session) != APR_SUCCESS)
     {
         h3_session_destroy(session);

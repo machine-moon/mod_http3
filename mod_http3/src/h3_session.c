@@ -79,7 +79,15 @@ apr_status_t h3_session_create(h3_session** psession, server_rec* s, quic_conn* 
         return rv;
     }
 
-    nghttp3_callbacks cb = {.acked_stream_data = on_acked_stream_data, .recv_header = on_recv_header, .end_headers = on_end_headers, .recv_data = on_recv_data, .stream_close = on_stream_close, .begin_headers = on_begin_headers, .stop_sending = on_stop_sending, .reset_stream = on_reset_stream};
+    nghttp3_callbacks cb = {.acked_stream_data = on_acked_stream_data,
+                            .deferred_consume = on_deferred_consume,
+                            .recv_header = on_recv_header,
+                            .end_headers = on_end_headers,
+                            .recv_data = on_recv_data,
+                            .stream_close = on_stream_close,
+                            .begin_headers = on_begin_headers,
+                            .stop_sending = on_stop_sending,
+                            .reset_stream = on_reset_stream};
     nghttp3_settings settings = {0};
     nghttp3_settings_default(&settings);
     if (nghttp3_conn_server_new(&session->ngh3, &cb, &settings, nghttp3_mem_default(), session) != 0)
@@ -94,6 +102,18 @@ apr_status_t h3_session_create(h3_session** psession, server_rec* s, quic_conn* 
 
     *psession = session;
     return APR_SUCCESS;
+}
+
+void h3_session_on_stream_acked(void* user, int64_t stream_id, uint64_t datalen)
+{
+    h3_session* session = user;
+    if (!session || session->ngh3_dead || !session->ngh3)
+    {
+        return;
+    }
+    apr_thread_mutex_lock(session->lock);
+    nghttp3_conn_add_ack_offset(session->ngh3, stream_id, datalen);
+    apr_thread_mutex_unlock(session->lock);
 }
 
 apr_status_t h3_session_create_control_streams(h3_session* session)
@@ -156,6 +176,7 @@ void h3_session_destroy(h3_session* session)
     {
         return;
     }
+    quic_conn_set_user(session->qconn, NULL);
     apr_thread_mutex_lock(session->lock);
     if (session->ngh3)
     {

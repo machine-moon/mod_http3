@@ -35,7 +35,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=builder /src/dependencies/apr-dist/      /src/dependencies/apr-dist/
 COPY --from=builder /src/dependencies/apr-util-dist/ /src/dependencies/apr-util-dist/
-COPY --from=builder /src/dependencies/openssl-dist/  /src/dependencies/openssl-dist/
+COPY --from=builder /src/quic/third-party/openssl-dist/  /src/quic/third-party/openssl-dist/
 COPY --from=builder /src/dependencies/nghttp3-dist/  /src/dependencies/nghttp3-dist/
 COPY --from=builder /src/dependencies/httpd-dist/    /src/dependencies/httpd-dist/
 COPY --from=builder /src/build/lib/mod_http3.so      /src/dependencies/httpd-dist/modules/mod_http3.so

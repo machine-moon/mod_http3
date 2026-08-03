@@ -4,6 +4,7 @@ build-*/
 builddir/
 builddir-*/
 dependencies/*-*
+quic/third-party/*-dist
 CMakeFiles/
 CMakeCache.txt
 CPackConfig.cmake

@@ -13,3 +13,4 @@ set_target_properties(${PROJECT_NAME}-quic PROPERTIES C_VISIBILITY_PRESET hidden
 apply_target_flags(${PROJECT_NAME}-quic)
 
 add_subdirectory(ossl)
+add_subdirectory(ngtcp2)

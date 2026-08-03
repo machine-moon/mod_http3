@@ -17,6 +17,7 @@
  */
 
 #include "h3_config.h"
+#include "h3_quic.h"
 #include <httpd.h>
 
 #include <http_config.h>
@@ -40,6 +41,7 @@
 #include "h3_io.h"
 #include "h3_session.h"
 #include "mod_http3.h"
+#include "quic.h"
 
 const char* h3_hook_http_scheme(const request_rec* r)
 {
@@ -172,13 +174,14 @@ int h3_status_handler(request_rec* r)
 
     ap_rprintf(r,
                "{\n"
+               "  \"quic_backend\": \"%s\",\n"
                "  \"live_workers\": %u,\n"
                "  \"total_connections\": %u,\n"
                "  \"total_streams\": %u,\n"
                "  \"total_bytes_read\": %" APR_UINT64_T_FMT ",\n"
                "  \"total_bytes_written\": %" APR_UINT64_T_FMT "\n"
                "}\n",
-               live, conns, streams, bytes_in, bytes_out);
+               quic_engine_name(), live, conns, streams, bytes_in, bytes_out);
 
     return OK;
 }

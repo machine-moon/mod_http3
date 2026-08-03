@@ -26,10 +26,17 @@
 	ignore = untracked
 	update = checkout
 	branch = 1.6.x
-[submodule "dependencies/openssl"]
-	path = dependencies/openssl
+[submodule "quic/third-party/openssl"]
+	path = quic/third-party/openssl
 	url = https://github.com/openssl/openssl.git
 	shallow = true
 	ignore = dirty
 	update = checkout
 	branch = openssl-3.5
+[submodule "quic/third-party/ngtcp2"]
+	path = quic/third-party/ngtcp2
+	url = https://github.com/ngtcp2/ngtcp2.git
+	shallow = true
+	ignore = untracked
+	update = checkout
+	#branch = main # tag: v1.25.0

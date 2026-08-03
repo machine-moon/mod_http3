@@ -82,6 +82,11 @@ endif()
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "unit/*.c")
 add_executable(${PROJECT_NAME}_tests ${test_sources})
 target_link_libraries(${PROJECT_NAME}_tests PRIVATE ${PROJECT_NAME}-deps)
+
+# ngtcp2 is PRIVATE to quic/ngtcp2/, so the dependency test asks for it by name.
+if(ENABLE_NGTCP2)
+  target_link_libraries(${PROJECT_NAME}_tests PRIVATE ngtcp2)
+endif()
 target_include_directories(${PROJECT_NAME}_tests PRIVATE ${CMAKE_SOURCE_DIR}/mod_http3/include ${CMAKE_CURRENT_SOURCE_DIR}/unit)
 
 # -- register with CTest --

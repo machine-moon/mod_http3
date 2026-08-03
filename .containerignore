@@ -1,6 +1,7 @@
 .git/
 .ai/
 dependencies/*-dist/
+quic/third-party/*-dist/
 build*/
 keys/
 certs/

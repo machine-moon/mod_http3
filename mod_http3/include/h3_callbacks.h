@@ -93,6 +93,14 @@ int on_recv_data(nghttp3_conn* conn, int64_t stream_id, const uint8_t* data, siz
 int on_acked_stream_data(nghttp3_conn* conn, int64_t stream_id, uint64_t datalen, void* user_data, void* stream_user_data);
 
 /**
+ * nghttp3 callback reporting bytes it consumed for a stream that had been
+ * deferred. The engine must be given this many bytes of flow control credit,
+ * or the peer stalls once its initial window is spent.
+ * @return 0 on success.
+ */
+int on_deferred_consume(nghttp3_conn* conn, int64_t stream_id, size_t consumed, void* user_data, void* stream_user_data);
+
+/**
  * nghttp3 stop_sending callback. Abort stream read side.
  * @param conn            The nghttp3 connection.
  * @param stream_id       QUIC stream id being stopped.

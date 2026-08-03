@@ -10,8 +10,8 @@ certs=$root/conf/certs
 # If no certificate is mounted, generate a self-signed one.
 if [ ! -s "$certs/server.crt" ]; then
     echo "no certificate mounted at $certs, generating a self-signed one"
-    if ! out=$(LD_LIBRARY_PATH=/src/dependencies/openssl-dist/lib64 OPENSSL_CONF=/dev/null \
-        /src/dependencies/openssl-dist/bin/openssl req -x509 -newkey rsa:2048 \
+    if ! out=$(LD_LIBRARY_PATH=/src/quic/third-party/openssl-dist/lib64 OPENSSL_CONF=/dev/null \
+        /src/quic/third-party/openssl-dist/bin/openssl req -x509 -newkey rsa:2048 \
         -nodes -days 365 -subj /CN=localhost \
         -keyout "$certs/server.key" -out "$certs/server.crt" 2>&1); then
         printf '%s\n' "$out" >&2
