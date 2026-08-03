@@ -2,6 +2,11 @@ name: interop
 
 on:
   workflow_call:
+    inputs:
+      module-image:
+        description: Image the module was built into, reused for the endpoint.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -39,7 +44,7 @@ jobs:
         with:
           context: .
           file: interop/Containerfile
-          build-args: JOBS=4
+          build-args: MODULE_IMAGE=${{ inputs.module-image }}
           tags: ${{ env.IMAGE }}
           load: true
           cache-from: type=gha,scope=interop
@@ -56,7 +61,7 @@ jobs:
         with:
           context: .
           file: interop/Containerfile
-          build-args: JOBS=4
+          build-args: MODULE_IMAGE=${{ inputs.module-image }}
           tags: ${{ env.IMAGE }}
           push: true
           cache-from: type=gha,scope=interop
@@ -72,7 +77,7 @@ jobs:
           echo "list=$list" | tee -a "$GITHUB_OUTPUT"
 
   test:
-    name: test (${{ matrix.client }})
+    name: test (${{ matrix.engine }}, ${{ matrix.client }})
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -82,9 +87,11 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
+        engine: [openssl, ngtcp2]
         client: ${{ fromJson(needs.build.outputs.clients) }}
     env:
       CLIENT: ${{ matrix.client }}
+      ENGINE: ${{ matrix.engine }}
 
     steps:
       - name: Checkout runner
@@ -120,17 +127,20 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tshark
           sudo modprobe ip6table_filter
 
-      - name: Register endpoint
-        run: |
-          jq --arg image "$IMAGE" --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
-             '. + {mod_http3: {image: $image, role: "server", url: $url}}' \
-             implementations_quic.json >impls.json
-          mv impls.json implementations_quic.json
-
       - name: Pull images
         run: |
           docker pull "$IMAGE"
           python pull.py -i "$CLIENT"
+
+      - name: Pin the engine
+        run: printf 'FROM %s\nENV ENGINE=%s\n' "$IMAGE" "$ENGINE" | docker build -t "mod_http3-$ENGINE" -
+
+      - name: Register endpoint
+        run: |
+          jq --arg image "mod_http3-$ENGINE" --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
+             '. + {mod_http3: {image: $image, role: "server", url: $url}}' \
+             implementations_quic.json >impls.json
+          mv impls.json implementations_quic.json
 
       - name: Run matrix
         continue-on-error: true
@@ -139,17 +149,17 @@ jobs:
       - name: Report verdict
         run: |
           result=$(jq -r '.results[0][0].result' results.json)
-          echo "### $CLIENT — \`$result\`" >>"$GITHUB_STEP_SUMMARY"
+          echo "### $ENGINE / $CLIENT — \`$result\`" >>"$GITHUB_STEP_SUMMARY"
           case $result in
             succeeded)   ;;
-            unsupported) echo "::warning title=$CLIENT::the client has no http3 test case" ;;
-            *)           echo "::error title=$CLIENT::http3 $result"; exit 1 ;;
+            unsupported) echo "::warning title=$ENGINE/$CLIENT::the client has no http3 test case" ;;
+            *)           echo "::error title=$ENGINE/$CLIENT::http3 $result"; exit 1 ;;
           esac
 
       - name: Keep logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: interop-logs-${{ matrix.client }}
+          name: interop-logs-${{ matrix.engine }}-${{ matrix.client }}
           path: logs/
           retention-days: 14

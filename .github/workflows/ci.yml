@@ -48,6 +48,8 @@ jobs:
     needs: build
     if: github.event_name != 'pull_request'
     uses: ./.github/workflows/interop.yml
+    with:
+      module-image: ${{ needs.build.outputs.image }}
     permissions:
       contents: read
       packages: write

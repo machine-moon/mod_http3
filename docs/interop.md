@@ -14,16 +14,26 @@ the module image has built. There is no local runner script: the
 matrix needs a docker daemon, a `tshark` new enough to dissect QUIC, IPv6 on
 the host and an hour of wall time, none of which belong in a developer loop.
 
-The `endpoint` job builds `interop/Containerfile`, checks the image answers
-`127` for a test case it does not implement, and publishes it as
+The `build` job builds `interop/Containerfile`, checks the image answers `127`
+for a test case it does not implement, and publishes it as
 `ghcr.io/machine-moon/mod_http3-interop:<commit sha>`.
 
-Each `client` job then **pulls that tag back out of the registry** and runs the
+That image compiles nothing. It takes `MODULE_IMAGE=` — the module image the
+`build` stage of the pipeline already produced — and copies the built `httpd`
+and `mod_http3.so` out of it onto the runner's own base, guarding the result
+with `ldd`. The module image is built with `ENABLE_NGTCP2=ON`, so the endpoint
+carries both QUIC engines and picks one from `$ENGINE` at start-up.
+
+Each `test` job then **pulls that tag back out of the registry** and runs the
 matrix against it. Nothing is passed between jobs as a file, so the image the
 matrix exercises is byte-for-byte the one the registry serves. The client list
 comes from the runner's own `implementations_quic.json`, so a new peer joins
-the matrix without a change here, and each job is named after the client it
-tests — the check list reads as a per-client result matrix.
+the matrix without a change here.
+
+The matrix is `engine × client`, so it runs twice over the client list — once
+per QUIC engine, against the same image — and each job is named
+`test (<engine>, <client>)`. That is what actually exercises the QUIC
+abstraction; the two halves should agree.
 
 A release tags that same image `:X.Y.Z` and `:latest`, so
 `mod_http3-interop:latest` always points at an endpoint whose matrix is public
@@ -31,7 +41,7 @@ and reproducible.
 
 ## Reading the results
 
-Each client job writes its verdict to the workflow summary. A client that does
+Each `test` job writes its verdict to the workflow summary. A client that does
 not implement the `http3` case reports a warning rather than a failure —
 nothing reached mod_http3 — and a failing job keeps its logs as an artifact for
 two weeks, laid out as `logs/<server>_<client>/<case>/`:
@@ -50,7 +60,7 @@ of `output.txt`.
 To reproduce a cell by hand, clone the
 [runner](https://github.com/quic-interop/quic-interop-runner), add the
 published image to its `implementations_quic.json` and run it — that is all the
-`client` job does:
+`test` job does:
 
 ```sh
 python run.py -s mod_http3 -c quic-go -t http3 -l logs -j results.json
@@ -84,15 +94,15 @@ client in the matrix.
 
 **Every case is unsupported.** The runner refuses an implementation that does
 not exit 127 for an unknown test case, and it makes that check with no timeout,
-so a hung endpoint hangs the run. The `endpoint` job pre-checks the same thing
-with a timeout before any client job starts.
+so a hung endpoint hangs the run. The `build` job pre-checks the same thing
+with a timeout before any `test` job starts.
 
 **Every case fails in analysis.** The runner replays the simulator's pcaps
 through `tshark`; without 4.5.0 or newer, cases fail in analysis rather than on
 the wire.
 
 **The runner cannot start the endpoint.** Its compose file needs docker engine
-28.1 or newer for `interface_name`, which is why the client jobs pin one.
+28.1 or newer for `interface_name`, which is why the `test` jobs pin one.
 
 **`chrome` reports "Expected exactly 1 handshake. Got: 2".** The browser opens a
 second connection and the case demands one. It does the same against nginx, so

@@ -101,6 +101,10 @@ only setting wired to an environment variable.
 Every `H3*` directive is documented in
 [httpd Directives](configuration_httpd.md).
 
+The published image is built with both QUIC engines, so `H3QuicEngine ngtcp2`
+in a mounted configuration switches the transport without rebuilding anything.
+It defaults to `openssl`.
+
 ## Development with compose
 
 Working on the module itself is easier with
@@ -131,7 +135,7 @@ are all compiled from source.
 Pin a version for anything reproducible:
 
 ```sh
-podman pull ghcr.io/machine-moon/mod_http3:0.0.54
+podman pull ghcr.io/machine-moon/mod_http3:0.0.50
 ```
 
 ## The interop endpoint

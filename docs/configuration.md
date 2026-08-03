@@ -6,6 +6,13 @@ For quick start and deployment, see [INSTALL](../INSTALL).
 
 For httpd runtime directives (`H3CertificatePath`, VirtualHost), see [httpd Configuration](configuration_httpd.md).
 
+The Python suite honours `H3_QUIC_ENGINE`, so a build configured with
+`-DENABLE_NGTCP2=ON` can be exercised on either transport:
+
+```sh
+H3_QUIC_ENGINE=ngtcp2 pytest test/http3
+```
+
 ## Build Commands
 
 | Command | Description |

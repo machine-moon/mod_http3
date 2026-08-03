@@ -17,9 +17,9 @@ esac
 install -D -m 644 -t /interop/certs /certs/cert.pem /certs/priv.key
 cp -rT /www /interop/www && chmod -R a+rX /interop/www
 chown -R www-data /logs
-echo "H3AddressValidation off" >/interop/testcase.conf
+printf 'H3AddressValidation off\nH3QuicEngine %s\n' "${ENGINE:-openssl}" >/interop/testcase.conf
 
-echo "TESTCASE=$TESTCASE"
+echo "TESTCASE=$TESTCASE ENGINE=${ENGINE:-openssl}"
 "$HTTPD" -t -f "$CONF" || { echo "httpd rejected the configuration"; exit 1; }
 
 exec "$HTTPD" -D FOREGROUND -f "$CONF"

@@ -11,8 +11,14 @@ env:
 
 jobs:
   suite:
-    name: suite
+    name: suite (${{ matrix.engine }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [openssl, ngtcp2]
+    env:
+      H3_QUIC_ENGINE: ${{ matrix.engine }}
 
     steps:
       - name: Checkout
@@ -40,12 +46,12 @@ jobs:
       - name: Run pytest
         run: |
           mkdir -p logs
-          docker run --rm -v "$PWD/logs:/src/build/test/gen" "$IMAGE" pytest -v
+          docker run --rm -e "H3_QUIC_ENGINE=$H3_QUIC_ENGINE" -v "$PWD/logs:/src/build/test/gen" "$IMAGE" pytest -v
 
       - name: Keep logs
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: test-logs
+          name: test-logs-${{ matrix.engine }}
           path: logs/
           retention-days: 14

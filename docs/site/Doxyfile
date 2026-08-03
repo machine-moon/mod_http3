@@ -6,9 +6,9 @@ GENERATE_HTML          = NO
 GENERATE_XML           = YES
 XML_OUTPUT             = xml
 INPUT                  = mod_http3/include mod_http3/src quic/include
-# Only the QUIC contract is published; engine internals stay hidden.
-EXCLUDE                = quic/include/detail quic/ossl
 RECURSIVE              = YES
+# Only the QUIC contract is published; engine internals stay hidden.
+EXCLUDE                = quic/ossl quic/ngtcp2
 OPTIMIZE_OUTPUT_FOR_C  = YES
 EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO
