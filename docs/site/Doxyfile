@@ -7,6 +7,7 @@ GENERATE_XML           = YES
 XML_OUTPUT             = xml
 INPUT                  = mod_http3/include mod_http3/src
 RECURSIVE              = YES
+EXCLUDE                = mod_http3/src/quic mod_http3/include/quic/detail
 OPTIMIZE_OUTPUT_FOR_C  = YES
 EXTRACT_ALL            = YES
 EXTRACT_PRIVATE        = NO

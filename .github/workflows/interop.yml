@@ -2,6 +2,11 @@ name: interop
 
 on:
   workflow_call:
+    inputs:
+      module-image:
+        description: Image the module was built into, reused for the endpoint.
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -39,7 +44,7 @@ jobs:
         with:
           context: .
           file: interop/Containerfile
-          build-args: JOBS=4
+          build-args: MODULE_IMAGE=${{ inputs.module-image }}
           tags: ${{ env.IMAGE }}
           load: true
           cache-from: type=gha,scope=interop
@@ -56,7 +61,7 @@ jobs:
         with:
           context: .
           file: interop/Containerfile
-          build-args: JOBS=4
+          build-args: MODULE_IMAGE=${{ inputs.module-image }}
           tags: ${{ env.IMAGE }}
           push: true
           cache-from: type=gha,scope=interop
@@ -120,17 +125,17 @@ jobs:
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tshark
           sudo modprobe ip6table_filter
 
+      - name: Pull images
+        run: |
+          docker pull "$IMAGE"
+          python pull.py -i "$CLIENT"
+
       - name: Register endpoint
         run: |
           jq --arg image "$IMAGE" --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" \
              '. + {mod_http3: {image: $image, role: "server", url: $url}}' \
              implementations_quic.json >impls.json
           mv impls.json implementations_quic.json
-
-      - name: Pull images
-        run: |
-          docker pull "$IMAGE"
-          python pull.py -i "$CLIENT"
 
       - name: Run matrix
         continue-on-error: true

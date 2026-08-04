@@ -184,7 +184,8 @@ static nghttp3_callbacks ngh3_callbacks = {
     NULL,                /* recv_origin */
     NULL,                /* end_origin */
     NULL,                /* rand */
-    NULL                 /* recv_settings2 */
+    NULL,                /* recv_settings2 */
+    NULL                 /* stream_close2 */
 };
 
 static void wait_for_activity(QUIC_TSERVER* qtserv)

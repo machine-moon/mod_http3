@@ -23,8 +23,8 @@ static void test_nghttp3_version(void)
 {
     const nghttp3_info* info = nghttp3_version(NGHTTP3_VERSION_AGE);
     sput_fail_unless(info != NULL, "nghttp3_version returns info");
-    sput_fail_unless(info->version_num == 0x011100, "nghttp3 version == 1.17.0");
-    sput_fail_unless(strcmp(info->version_str, "1.17.0") == 0, "nghttp3 version string == 1.17.0");
+    sput_fail_unless(info->version_num == 0x011200, "nghttp3 version == 1.18.0");
+    sput_fail_unless(strcmp(info->version_str, "1.18.0") == 0, "nghttp3 version string == 1.18.0");
 }
 
 static void test_nghttp3_settings_default(void)

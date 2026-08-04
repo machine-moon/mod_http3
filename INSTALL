@@ -39,7 +39,7 @@
      httpd    MMN >= 20211221
      APR      >= 1.7.0
      APU      >= 1.6.0
-     nghttp3  >= 1.17.0
+     nghttp3  >= 1.18.0
 
   NOTE: Distro-packaged httpd (Ubuntu, Fedora, etc.) ships with an
   older MMN and will be rejected. Use the default source build or

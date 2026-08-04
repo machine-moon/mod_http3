@@ -1,4 +1,5 @@
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -37,9 +38,12 @@ class TestGracefulShutdown:
 
         # Server must serve requests successfully after restart.
         assert env.is_live()
-        import time
-        time.sleep(1.5)
-        r = env.curl_get(url, options=["--http3-only", "-k"])
+        deadline = time.monotonic() + 30
+        while True:
+            r = env.curl_get(url, options=["--http3-only", "-k"])
+            if r.exit_code == 0 or time.monotonic() >= deadline:
+                break
+            time.sleep(0.5)
         assert r.exit_code == 0, r.stderr + r.stdout
         assert r.response["status"] == 200
         assert r.response["protocol"] == "HTTP/3"

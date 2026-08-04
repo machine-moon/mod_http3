@@ -3,10 +3,13 @@
 The default build compiles OpenSSL, APR, APR-util, httpd, and nghttp3 from the repository submodules. This is the supported path when system packages do not meet the required httpd module magic number.
 
 ```sh
-git submodule update --init --recursive
+git submodule update --init
+git submodule update --init --recursive dependencies/nghttp3
 cmake -B build
 cmake --build build
 ```
+
+Only nghttp3 needs its own submodule (`lib/sfparse`). Recursing everywhere also clones OpenSSL's eleven external-test submodules, which the build never uses.
 
 The module is written to `build/lib/mod_http3.so`.
 
@@ -21,7 +24,7 @@ the `WITH_*` options only if they meet these minimums.
 | Apache httpd | MMN 20211221 |
 | APR | 1.7.0 |
 | APR-util | 1.6.0 |
-| nghttp3 | 1.17.0 |
+| nghttp3 | 1.18.0 |
 
 Distribution-provided httpd packages usually have an older MMN and are rejected. Use the default source build or provide compatible custom prefixes.
 

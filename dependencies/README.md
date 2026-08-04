@@ -17,8 +17,9 @@ mod_http3 uses **git submodules** for all dependencies. By default, all dependen
 All submodules are shallow (`shallow = true`). Initialise them once:
 
 ```sh
-git submodule sync --recursive
-git submodule update --init --recursive
+git submodule sync
+git submodule update --init
+git submodule update --init --recursive dependencies/nghttp3
 ```
 
 ---

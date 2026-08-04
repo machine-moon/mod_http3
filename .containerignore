@@ -1,6 +1,7 @@
 .git/
 .ai/
 dependencies/*-dist/
+test/certs/
 build*/
 keys/
 certs/

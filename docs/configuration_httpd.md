@@ -127,6 +127,17 @@ Whether to validate a client's source address before accepting a connection. Whe
 
 Turning it off removes one round trip from every connection, at the cost of that protection. Leave it on for internet-facing deployments. It exists mainly for interoperability testing, where a test may require a handshake that completes without an intervening Retry.
 
+### http3-status
+
+Runtime counters as JSON. The handler is not mapped anywhere by default; give
+it a location first:
+
+```apache
+<Location /http3-status>
+    SetHandler http3-status
+</Location>
+```
+
 ## VirtualHost Configuration
 
 ### Port Detection
