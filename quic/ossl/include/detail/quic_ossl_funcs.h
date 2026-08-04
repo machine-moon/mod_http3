@@ -24,26 +24,20 @@
 /**
  * Build the QUIC listener on @p udp_fd, together with the filter BIO that
  * recovers peer addresses from OpenSSL's accept queue.
- * @param cfg    Certificates and timeouts the listener runs with.
- * @param udp_fd Pre-opened non-blocking UDP socket bound to the listen port.
+ * @param cfg    Credentials, settings and io the listener runs with.
  * @param err    Buffer receiving the reason on failure; may be NULL.
  * @param errlen Capacity of @p err.
  * @return New engine, or NULL on failure.
+ * @note Needs an io whose fd() is a real descriptor: OpenSSL drives its own
+ *       datagram BIO, so send() and recv() go unused.
  */
-quic_engine* quic_ossl_engine_create(const quic_config* cfg, int udp_fd, char* err, size_t errlen);
+quic_engine* quic_ossl_engine_create(const quic_config* cfg, char* err, size_t errlen);
 
 /**
  * Tear down the listener, its TLS context and any datagrams still queued.
  * @param engine Engine to destroy.
  */
 void quic_ossl_engine_destroy(quic_engine* engine);
-
-/**
- * Apply the socket options OpenSSL's QUIC listener expects.
- * @param engine Engine owning the socket.
- * @param fd     Socket to configure.
- */
-void quic_ossl_engine_socket_configure(quic_engine* engine, int fd);
 
 /**
  * Drive one round of listener work: read datagrams, run timers, send.

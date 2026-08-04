@@ -27,9 +27,16 @@
 #include "quic.h"
 #include "quic_ossl.h"
 
-quic_engine* quic_ossl_engine_create(const quic_config* cfg, int udp_fd, char* err, size_t errlen)
+quic_engine* quic_ossl_engine_create(const quic_config* cfg, char* err, size_t errlen)
 {
     QUIC_CHECK(cfg);
+    QUIC_CHECK(cfg->io);
+    int udp_fd = cfg->io->fd ? cfg->io->fd(cfg->io->io_ctx) : -1;
+    if (udp_fd < 0)
+    {
+        quic_tls_error(err, errlen, "this engine needs a pollable descriptor from quic_io");
+        return NULL;
+    }
     quic_engine* engine = calloc(1, sizeof(*engine));
     if (!engine)
     {
@@ -37,6 +44,7 @@ quic_engine* quic_ossl_engine_create(const quic_config* cfg, int udp_fd, char* e
         return NULL;
     }
     engine->peer_addr_ex_index = -1;
+    engine->cfg = *cfg;
 
     engine->ssl_ctx = quic_tls_ctx_create(OSSL_QUIC_server_method(), cfg, err, errlen);
     if (!engine->ssl_ctx)
@@ -69,7 +77,7 @@ quic_engine* quic_ossl_engine_create(const quic_config* cfg, int udp_fd, char* e
 
     SSL_CTX_set_new_pending_conn_cb(engine->ssl_ctx, quic_ossl_new_pending_conn_cb, engine);
 
-    uint64_t listener_flags = cfg->address_validation ? 0 : (uint64_t)SSL_LISTENER_FLAG_NO_VALIDATE;
+    uint64_t listener_flags = cfg->settings.address_validation ? 0 : (uint64_t)SSL_LISTENER_FLAG_NO_VALIDATE;
     engine->ssl_listener = SSL_new_listener(engine->ssl_ctx, listener_flags);
     if (!engine->ssl_listener)
     {
@@ -143,12 +151,6 @@ const char* quic_ossl_engine_last_error(quic_engine* engine)
     }
     engine->err_pending = 0;
     return engine->err;
-}
-
-void quic_ossl_engine_socket_configure(quic_engine* engine, int fd)
-{
-    (void)engine;
-    (void)fd;
 }
 
 int quic_ossl_engine_pump(quic_engine* engine)

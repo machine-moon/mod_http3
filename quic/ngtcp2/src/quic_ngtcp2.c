@@ -42,7 +42,7 @@ ngtcp2_tstamp quic_ngtcp2_now(void)
 void quic_ngtcp2_send(quic_ngtcp2_conn* conn, const ngtcp2_path* path, const uint8_t* buf, size_t len)
 {
     const struct sockaddr* dst = (const struct sockaddr*)path->remote.addr;
-    while (sendto(conn->engine->udp_fd, buf, len, 0, dst, (socklen_t)path->remote.addrlen) < 0 && errno == EINTR)
+    while (conn->engine->io->send(conn->engine->io->io_ctx, buf, len, dst, (socklen_t)path->remote.addrlen) < 0 && errno == EINTR)
     {
     }
 }
@@ -134,7 +134,7 @@ void quic_ngtcp2_queue_accept(quic_ngtcp2_conn* conn)
 
 static void engine_send_raw(quic_engine* engine, const struct sockaddr* dst, socklen_t dstlen, const uint8_t* buf, size_t len)
 {
-    while (sendto(engine->udp_fd, buf, len, 0, dst, dstlen) < 0 && errno == EINTR)
+    while (engine->io->send(engine->io->io_ctx, buf, len, dst, dstlen) < 0 && errno == EINTR)
     {
     }
 }
@@ -240,16 +240,28 @@ static quic_ngtcp2_conn* conn_new(quic_engine* engine, const ngtcp2_pkt_hd* hd, 
     ngtcp2_settings settings;
     ngtcp2_settings_default(&settings);
     settings.initial_ts = quic_ngtcp2_now();
+    switch (engine->cfg.settings.cc_algo)
+    {
+        case QUIC_CC_RENO: settings.cc_algo = NGTCP2_CC_ALGO_RENO; break;
+        case QUIC_CC_CUBIC: settings.cc_algo = NGTCP2_CC_ALGO_CUBIC; break;
+        case QUIC_CC_BBR: settings.cc_algo = NGTCP2_CC_ALGO_BBR; break;
+        case QUIC_CC_DEFAULT: break;
+    }
 
     ngtcp2_transport_params params;
     ngtcp2_transport_params_default(&params);
+    const quic_settings* set = &engine->cfg.settings;
     params.max_idle_timeout = engine->idle_timeout_ns;
-    params.initial_max_data = 1024 * 1024;
-    params.initial_max_stream_data_bidi_local = 256 * 1024;
-    params.initial_max_stream_data_bidi_remote = 256 * 1024;
-    params.initial_max_stream_data_uni = 256 * 1024;
-    params.initial_max_streams_bidi = 128;
-    params.initial_max_streams_uni = 8;
+    params.initial_max_data = set->initial_max_data;
+    params.initial_max_stream_data_bidi_local = set->initial_max_stream_data_bidi_local;
+    params.initial_max_stream_data_bidi_remote = set->initial_max_stream_data_bidi_remote;
+    params.initial_max_stream_data_uni = set->initial_max_stream_data_uni;
+    params.initial_max_streams_bidi = set->initial_max_streams_bidi;
+    params.initial_max_streams_uni = set->initial_max_streams_uni;
+    if (set->enable_datagrams)
+    {
+        params.max_datagram_frame_size = QUIC_NGTCP2_MAX_UDP_PAYLOAD;
+    }
     params.original_dcid = odcid ? *odcid : hd->dcid;
     params.original_dcid_present = 1;
     if (retry_scid)
@@ -356,9 +368,10 @@ static void engine_expire(quic_engine* engine)
     }
 }
 
-quic_engine* quic_ngtcp2_engine_create(const quic_config* cfg, int udp_fd, char* err, size_t errlen)
+quic_engine* quic_ngtcp2_engine_create(const quic_config* cfg, char* err, size_t errlen)
 {
     QUIC_CHECK(cfg);
+    QUIC_CHECK(cfg->io);
 
     quic_engine* engine = calloc(1, sizeof(*engine));
     if (!engine)
@@ -367,9 +380,9 @@ quic_engine* quic_ngtcp2_engine_create(const quic_config* cfg, int udp_fd, char*
         return NULL;
     }
     engine->cfg = *cfg;
-    engine->udp_fd = udp_fd;
-    engine->validate_addr = cfg->address_validation;
-    engine->idle_timeout_ns = (uint64_t)cfg->idle_timeout_secs * NGTCP2_SECONDS;
+    engine->io = cfg->io;
+    engine->validate_addr = cfg->settings.address_validation;
+    engine->idle_timeout_ns = cfg->settings.max_idle_timeout_ms * NGTCP2_MILLISECONDS;
 
     if (RAND_bytes(engine->secret, (int)sizeof(engine->secret)) != 1)
     {
@@ -423,7 +436,7 @@ static int recv_one(quic_engine* engine, uint8_t* buf, size_t buflen, struct soc
     *peerlen = sizeof(*peer);
     do
     {
-        *nread = recvfrom(engine->udp_fd, buf, buflen, 0, (struct sockaddr*)peer, peerlen);
+        *nread = engine->io->recv(engine->io->io_ctx, buf, buflen, peer, peerlen);
     } while (*nread < 0 && errno == EINTR);
 
     if (*nread < 0)
@@ -432,12 +445,12 @@ static int recv_one(quic_engine* engine, uint8_t* buf, size_t buflen, struct soc
     }
 
     *locallen = sizeof(*local);
-    return getsockname(engine->udp_fd, (struct sockaddr*)local, locallen) == 0;
+    return engine->io->local_addr(engine->io->io_ctx, local, locallen);
 }
 
 int quic_ngtcp2_engine_pump(quic_engine* engine)
 {
-    if (!engine || engine->udp_fd < 0)
+    if (!engine || !engine->io)
     {
         return 0;
     }

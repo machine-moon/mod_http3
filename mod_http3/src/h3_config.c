@@ -34,7 +34,6 @@
 #include "h3.h"
 #include "h3_check.h"
 #include "h3_config.h"
-#include "h3_quic.h"
 #include "mod_http3.h"
 #include "quic.h"
 
@@ -108,8 +107,36 @@ static const char* set_h3_key_path(cmd_parms* cmd, void* /*dummy*/, const char* 
     return set_string(cmd, arg, (const char*)offsetof(h3_server_conf, h3_key_path));
 }
 
+
+static const char* engine_list(apr_pool_t* pool)
+{
+    const char* list = quic_engine_name_at(0);
+    for (size_t i = 1; i < quic_engine_count(); i++)
+    {
+        list = apr_pstrcat(pool, list, ", ", quic_engine_name_at(i), NULL);
+    }
+    return list;
+}
+
+/* Checked here rather than only at post_config, which httpd -t never reaches. */
+static int engine_known(const char* name)
+{
+    for (size_t i = 0; i < quic_engine_count(); i++)
+    {
+        if (apr_cstr_casecmp(name, quic_engine_name_at(i)) == 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static const char* set_h3_quic_engine(cmd_parms* cmd, void* /*dummy*/, const char* arg)
 {
+    if (arg && *arg && !engine_known(arg))
+    {
+        return apr_psprintf(cmd->pool, "H3QuicEngine %s: this build has no such engine (compiled: %s)", arg, engine_list(cmd->pool));
+    }
     return set_string(cmd, arg, (const char*)offsetof(h3_server_conf, h3_quic_engine));
 }
 
@@ -433,7 +460,7 @@ int h3_post_config(apr_pool_t* /*p*/, apr_pool_t* /*plog*/, apr_pool_t* ptemp, s
 
     if (conf->h3_quic_engine && !quic_select(conf->h3_quic_engine))
     {
-        ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: H3QuicEngine %s: this build has no such engine (compiled: %s). Rebuild with -DENABLE_NGTCP2=ON.", conf->h3_quic_engine, quic_engine_names(ptemp));
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: H3QuicEngine %s: this build has no such engine (compiled: %s)", conf->h3_quic_engine, engine_list(ptemp));
         return HTTP_INTERNAL_SERVER_ERROR;
     }
 

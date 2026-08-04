@@ -22,15 +22,19 @@
 #include "detail/quic_ngtcp2_funcs.h"
 
 /**
- * Operations table for the ngtcp2 QUIC engine, built only under ENABLE_NGTCP2.
+ * API for the ngtcp2 QUIC engine, built only under ENABLE_NGTCP2.
  * Clears caps.acks_are_write_offsets: ngtcp2 reports real per-stream
  * acknowledgements and retransmits from the caller's buffers, so they must be
  * held until it acknowledges them.
+ * @note Honours every quic_settings field: the initial_max_* windows and
+ *       address_validation become transport parameters, max_idle_timeout_ms
+ *       and cc_algo reach ngtcp2 directly, and enable_datagrams advertises
+ *       max_datagram_frame_size.
  * @return Table with static storage duration; never NULL.
  */
-static inline const quic_ops* quic_ngtcp2_ops(void)
+static inline const quic_api* quic_ngtcp2_api(void)
 {
-    static const quic_ops ops = {
+    static const quic_api api = {
         .caps =
             {
                 .acks_are_write_offsets = 0,
@@ -39,7 +43,6 @@ static inline const quic_ops* quic_ngtcp2_ops(void)
             {
                 .create = quic_ngtcp2_engine_create,
                 .destroy = quic_ngtcp2_engine_destroy,
-                .socket_configure = NULL,
                 .pump = quic_ngtcp2_engine_pump,
                 .want = quic_ngtcp2_engine_want,
                 .accept_conn = quic_ngtcp2_engine_accept_conn,
@@ -70,7 +73,7 @@ static inline const quic_ops* quic_ngtcp2_ops(void)
                 .consumed = quic_ngtcp2_stream_consumed,
             },
     };
-    return &ops;
+    return &api;
 }
 
 #endif /* QUIC_NGTCP2_H */

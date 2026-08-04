@@ -1,4 +1,3 @@
-/* Auto-generated - do not edit */
 /*
  * Copyright (c) 2026 The mod_http3 Project Authors. All rights reserved.
  *
@@ -17,18 +16,24 @@
  * limitations under the License.
  */
 
-#ifndef H3_VERSION_H
-#define H3_VERSION_H
+#include "quic.h"
 
-#define MOD_HTTP3_VERSION_MAJOR 0
-#define MOD_HTTP3_VERSION_MINOR 0
-#define MOD_HTTP3_VERSION_PATCH 51
-
-// Construct a 24-bit packed version number from major, minor and patch. Version 1.2.3 becomes 0x010203.
-#define MOD_HTTP3_MAKE_VERSION(major, minor, patch) (((major) << 16) | ((minor) << 8) | (patch))
-
-#define MOD_HTTP3_VERSION MOD_HTTP3_MAKE_VERSION(MOD_HTTP3_VERSION_MAJOR, MOD_HTTP3_VERSION_MINOR, MOD_HTTP3_VERSION_PATCH)
-
-#define MOD_HTTP3_VERSION_STRING "0.0.51"
-
-#endif /* H3_VERSION_H */
+void quic_settings_default(quic_settings* s)
+{
+    if (!s)
+    {
+        return;
+    }
+    *s = (quic_settings){
+        .initial_max_data = 1024 * 1024,
+        .initial_max_stream_data_bidi_local = 256 * 1024,
+        .initial_max_stream_data_bidi_remote = 256 * 1024,
+        .initial_max_stream_data_uni = 256 * 1024,
+        .initial_max_streams_bidi = 128,
+        .initial_max_streams_uni = 8,
+        .max_idle_timeout_ms = 30 * 1000,
+        .cc_algo = QUIC_CC_DEFAULT,
+        .enable_datagrams = 0,
+        .address_validation = 1,
+    };
+}

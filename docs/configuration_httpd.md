@@ -129,13 +129,28 @@ Turning it off removes one round trip from every connection, at the cost of that
 
 ### H3QuicEngine
 
-**Syntax:** `H3QuicEngine openssl|ngtcp2`
+**Syntax:** `H3QuicEngine openssl|ngtcp2|null`
 **Context:** server config, virtual host
 **Default:** `openssl`
 
 Which QUIC transport carries HTTP/3. `openssl` uses OpenSSL 3.5's own QUIC implementation and is always available. `ngtcp2` is present only when the module was built with `-DENABLE_NGTCP2=ON`; naming an engine the build does not contain is a fatal configuration error, so httpd refuses to start rather than quietly serving on the other one. OpenSSL provides TLS on both paths, so there is only ever one TLS stack in the process.
 
+`null` implements the whole engine contract and carries no traffic: the server
+listens but never completes a handshake. It exists to keep the contract
+addable-to and to run the module with no transport underneath; do not select it
+in production.
+
+Naming an engine this build does not contain is rejected when the configuration
+is parsed, so `httpd -t` catches it and names the engines that are compiled in.
+
 The engine in use is reported by the `http3-status` handler as `quic_backend`.
+That handler is not mapped anywhere by default; give it a location first:
+
+```apache
+<Location /http3-status>
+    SetHandler http3-status
+</Location>
+```
 
 ## VirtualHost Configuration
 

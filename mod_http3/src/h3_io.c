@@ -134,13 +134,15 @@ apr_status_t h3_io_listen_start(apr_pool_t* pchild, server_rec* s, h3_server_con
 
     char qerr[QUIC_ERRLEN] = {0};
     quic_config qcfg = {
-        .cert_path = conf->h3_cert_path,
-        .key_path = conf->h3_key_path,
-        .address_validation = (conf->h3_address_validation != H3_FLAG_OFF),
-        .idle_timeout_secs = (uint32_t)conf->h3_idle_timeout,
-        .on_stream_acked = h3_session_on_stream_acked,
+        .cred = {.kind = QUIC_CRED_FILE, .as.file = {.cert_path = conf->h3_cert_path, .key_path = conf->h3_key_path}},
+        .callbacks = {.stream_acked = h3_session_on_stream_acked},
+        .io = &io->qio,
     };
-    io->qengine = quic_engine_create(&qcfg, udp_fd, qerr, sizeof(qerr));
+    quic_settings_default(&qcfg.settings);
+    qcfg.settings.max_idle_timeout_ms = (uint64_t)conf->h3_idle_timeout * 1000;
+    qcfg.settings.address_validation = (conf->h3_address_validation != H3_FLAG_OFF);
+    quic_io_udp_init(&io->qio, udp_fd);
+    io->qengine = quic_engine_create(&qcfg, qerr, sizeof(qerr));
     if (!io->qengine)
     {
         ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "QUIC engine initialization failed: %s", qerr);

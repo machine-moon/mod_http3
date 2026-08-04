@@ -28,6 +28,8 @@ typedef struct quic_ossl_datagram quic_ossl_datagram;
 
 struct quic_engine
 {
+    quic_config cfg;
+
     SSL_CTX* ssl_ctx;
     SSL* ssl_listener;
 

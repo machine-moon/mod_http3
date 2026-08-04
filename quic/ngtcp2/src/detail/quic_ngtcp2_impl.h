@@ -87,8 +87,9 @@ void quic_ngtcp2_map_free(quic_ngtcp2_map* map);
 struct quic_engine
 {
     quic_config cfg;
+
     SSL_CTX* ssl_ctx;
-    int udp_fd;
+    const quic_io* io;
     int validate_addr;
     uint64_t idle_timeout_ns;
     uint8_t secret[32];

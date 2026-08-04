@@ -17,7 +17,6 @@
  */
 
 #include "h3_config.h"
-#include "h3_quic.h"
 #include <httpd.h>
 
 #include <http_config.h>

@@ -80,7 +80,7 @@ void flush_nghttp3(h3_session* session)
     CHECK(session);
     CHECK(!session->ngh3_dead, return;);
     unblock_writable_streams(session);
-    const quic_ops* ops = quic_get_ops();
+    const quic_api* api = quic_selected();
     for (;;)
     {
         nghttp3_vec vec[16] = {0};
@@ -106,7 +106,7 @@ void flush_nghttp3(h3_session* session)
         {
             /* Stream is gone; swallow its queued bytes so the send queue keeps draining. */
             nghttp3_conn_add_write_offset(session->ngh3, sid, expected);
-            if (ops->caps.acks_are_write_offsets)
+            if (api->caps.acks_are_write_offsets)
             {
                 nghttp3_conn_add_ack_offset(session->ngh3, sid, expected);
             }
@@ -121,14 +121,14 @@ void flush_nghttp3(h3_session* session)
         {
             /* Peer reset: drop the remainder; teardown happens via the nghttp3 callbacks. */
             nghttp3_conn_add_write_offset(session->ngh3, sid, expected);
-            if (ops->caps.acks_are_write_offsets)
+            if (api->caps.acks_are_write_offsets)
             {
                 nghttp3_conn_add_ack_offset(session->ngh3, sid, expected);
             }
             continue;
         }
         nghttp3_conn_add_write_offset(session->ngh3, sid, res.accepted);
-        if (ops->caps.acks_are_write_offsets)
+        if (api->caps.acks_are_write_offsets)
         {
             nghttp3_conn_add_ack_offset(session->ngh3, sid, res.accepted);
         }
@@ -140,7 +140,7 @@ void flush_nghttp3(h3_session* session)
                 session->blocked_streams++;
                 nghttp3_conn_block_stream(session->ngh3, sid);
             }
-            else if (!ops->caps.acks_are_write_offsets)
+            else if (!api->caps.acks_are_write_offsets)
             {
                 /* A stale flag would otherwise spin this loop on the same vec. */
                 nghttp3_conn_block_stream(session->ngh3, sid);

@@ -25,13 +25,12 @@
  * Open the TLS context and the connection-ID routing table over @p udp_fd.
  * Unlike OpenSSL's QUIC, ngtcp2 owns no listener: the engine reads datagrams
  * itself and routes each one by destination connection ID.
- * @param cfg    Certificates, timeouts and callbacks the engine runs with.
- * @param udp_fd Pre-opened non-blocking UDP socket bound to the listen port.
+ * @param cfg    Credentials, settings, callbacks and io the engine runs with.
  * @param err    Buffer receiving the reason on failure; may be NULL.
  * @param errlen Capacity of @p err.
  * @return New engine, or NULL on failure.
  */
-quic_engine* quic_ngtcp2_engine_create(const quic_config* cfg, int udp_fd, char* err, size_t errlen);
+quic_engine* quic_ngtcp2_engine_create(const quic_config* cfg, char* err, size_t errlen);
 
 /**
  * Close every live connection and release the TLS context.

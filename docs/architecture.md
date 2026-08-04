@@ -27,7 +27,7 @@ flowchart LR
 
 ## QUIC engines
 
-The transport sits behind one internal interface, `quic/include/quic.h`.
+The transport sits behind one internal interface, `quic/quic/include/quic.h`.
 Which engines a build contains is decided at compile time; which one runs is
 decided at start-up.
 
@@ -45,7 +45,7 @@ httpd refuses to start rather than quietly falling back. A running server
 reports the engine in use through the `http3-status` handler's `quic_backend`
 field. OpenSSL provides TLS on both paths, so there is only ever one TLS stack.
 
-Each engine lives in `quic/<name>/`, exposing `quic_<name>_ops()` from
+Each engine lives in `quic/<name>/`, exposing `quic_<name>_api()` from
 `quic/<name>/include/quic_<name>.h` and keeping its own types in `src/detail/`.
 Adding one means creating that directory, an `add_subdirectory()` line in
 `quic/CMakeLists.txt`, and a row in `quic_engines[]` in
@@ -54,11 +54,24 @@ and transport library to the `mod_http3-quic` target itself.
 
 That library depends on nothing but OpenSSL and each engine's own transport, so
 no APR type, httpd type or module symbol appears anywhere under `quic/`. The
-module supplies certificates and callbacks through `quic_config`, engines report
-failures through an error buffer rather than logging, and `quic/src/quic_tls.c`
-builds the one TLS context both engines serve from. Because the transport
-libraries are linked privately, ngtcp2's headers stay off the include path of
-every translation unit outside `quic/`.
+module passes one `quic_config`: a `quic_cred` naming a certificate by path or
+by PEM buffer, a `quic_settings` carrying RFC 9000 transport parameters, a
+`quic_callbacks` table of events, and a `quic_io` saying how datagrams move
+— so the contract names no socket, and `quic_io_udp_init()` supplies the
+ordinary UDP implementation. Engines report failures through an error buffer
+rather than logging, and `quic/quic/src/quic_tls.c` builds the one TLS context every
+engine serves from. Because the transport libraries are linked privately,
+ngtcp2's headers stay off the include path of every translation unit outside
+`quic/`.
+
+An engine maps what it can of `quic_settings` and documents the rest in a
+`@note` on its ops table. Selection lives in `quic/quic/src/quic_registry.c`, so
+`quic/quic/include/quic.h` is the only header a caller includes and every
+`quic_<engine>.h` is private to the library: callers name an engine with
+`quic_select()` and list what a build offers with `quic_engine_count()` and
+`quic_engine_name_at()`. `quic/null/` implements the whole contract and carries
+nothing; it is the standing proof that adding a backend touches its own
+directory, one `add_subdirectory()` and one registry row — all inside `quic/`.
 
 nghttp3 sits above the interface and is unaffected by the choice. The engines
 differ in one behaviour worth knowing: OpenSSL exposes no per-stream

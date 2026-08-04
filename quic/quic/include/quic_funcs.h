@@ -22,22 +22,63 @@
 #include "quic_types.h"
 
 /**
- * The selected engine's operations table.
- * @return Never NULL.
+ * Make @p name the engine every later call dispatches to. Until this succeeds
+ * the first engine compiled in is the one in use.
+ * @param name Engine name, matched case-insensitively.
+ * @return 1 if this build contains @p name, 0 otherwise, leaving the previous
+ *         selection alone.
  */
-const quic_ops* quic_get_ops(void);
+int quic_select(const char* name);
 
 /**
- * Create a QUIC engine bound to an already-open UDP socket.
- * @param cfg    Certificates, timeouts and callbacks the engine runs with.
- * @param udp_fd Pre-opened non-blocking UDP socket.
+ * Name of the engine currently selected.
+ * @return Engine name; never NULL.
+ */
+const char* quic_engine_name(void);
+
+/**
+ * How many engines this build contains.
+ * @return At least one.
+ */
+size_t quic_engine_count(void);
+
+/**
+ * Name of the engine at @p i, for listing what a build offers.
+ * @param i Index below quic_engine_count().
+ * @return Engine name, or NULL when @p i is out of range.
+ */
+const char* quic_engine_name_at(size_t i);
+
+/**
+ * The selected engine's API.
+ * @return Never NULL.
+ */
+const quic_api* quic_selected(void);
+
+/**
+ * Fill @p s with the transport parameters an engine uses when told nothing else.
+ * @param s Settings to overwrite.
+ */
+void quic_settings_default(quic_settings* s);
+
+/**
+ * Point @p io at the ordinary UDP implementation over @p fd, which the caller
+ * keeps ownership of.
+ * @param io Table to fill.
+ * @param fd Pre-opened non-blocking UDP socket bound to the listen port.
+ */
+void quic_io_udp_init(quic_io* io, int fd);
+
+/**
+ * Create a QUIC engine over the datagram transport named in @p cfg.
+ * @param cfg    Credentials, settings, callbacks and io the engine runs with.
  * @param err    Buffer receiving the reason on failure; may be NULL.
  * @param errlen Capacity of @p err.
  * @return New engine, or NULL on failure.
  */
-static inline quic_engine* quic_engine_create(const quic_config* cfg, int udp_fd, char* err, size_t errlen)
+static inline quic_engine* quic_engine_create(const quic_config* cfg, char* err, size_t errlen)
 {
-    return quic_get_ops()->engine.create(cfg, udp_fd, err, errlen);
+    return quic_selected()->engine.create(cfg, err, errlen);
 }
 
 /**
@@ -46,22 +87,9 @@ static inline quic_engine* quic_engine_create(const quic_config* cfg, int udp_fd
  */
 static inline void quic_engine_destroy(quic_engine* engine)
 {
-    if (engine && quic_get_ops()->engine.destroy)
+    if (engine && quic_selected()->engine.destroy)
     {
-        quic_get_ops()->engine.destroy(engine);
-    }
-}
-
-/**
- * Apply any engine-specific socket options.
- * @param engine Engine owning the socket; NULL is ignored.
- * @param fd     Socket to configure.
- */
-static inline void quic_engine_socket_configure(quic_engine* engine, int fd)
-{
-    if (engine && quic_get_ops()->engine.socket_configure)
-    {
-        quic_get_ops()->engine.socket_configure(engine, fd);
+        quic_selected()->engine.destroy(engine);
     }
 }
 
@@ -72,7 +100,7 @@ static inline void quic_engine_socket_configure(quic_engine* engine, int fd)
  */
 static inline int quic_engine_pump(quic_engine* engine)
 {
-    return engine ? quic_get_ops()->engine.pump(engine) : 0;
+    return engine ? quic_selected()->engine.pump(engine) : 0;
 }
 
 /**
@@ -84,9 +112,9 @@ static inline int quic_engine_pump(quic_engine* engine)
  */
 static inline void quic_engine_want(quic_engine* engine, int* want_read, int* want_write, int* timeout_ms)
 {
-    if (engine && quic_get_ops()->engine.want)
+    if (engine && quic_selected()->engine.want)
     {
-        quic_get_ops()->engine.want(engine, want_read, want_write, timeout_ms);
+        quic_selected()->engine.want(engine, want_read, want_write, timeout_ms);
     }
 }
 
@@ -97,7 +125,7 @@ static inline void quic_engine_want(quic_engine* engine, int* want_read, int* wa
  */
 static inline quic_conn* quic_engine_accept_conn(quic_engine* engine)
 {
-    return engine ? quic_get_ops()->engine.accept_conn(engine) : NULL;
+    return engine ? quic_selected()->engine.accept_conn(engine) : NULL;
 }
 
 /**
@@ -110,7 +138,7 @@ static inline quic_conn* quic_engine_accept_conn(quic_engine* engine)
  */
 static inline int quic_engine_peer_addr(quic_engine* engine, quic_conn* conn, struct sockaddr_storage* addr, socklen_t* addr_len)
 {
-    return engine ? quic_get_ops()->engine.peer_addr(engine, conn, addr, addr_len) : 0;
+    return engine ? quic_selected()->engine.peer_addr(engine, conn, addr, addr_len) : 0;
 }
 
 /**
@@ -120,7 +148,7 @@ static inline int quic_engine_peer_addr(quic_engine* engine, quic_conn* conn, st
  */
 static inline const char* quic_engine_last_error(quic_engine* engine)
 {
-    return engine ? quic_get_ops()->engine.last_error(engine) : "";
+    return engine ? quic_selected()->engine.last_error(engine) : "";
 }
 
 /**
@@ -131,7 +159,7 @@ static inline const char* quic_engine_last_error(quic_engine* engine)
  */
 static inline int quic_conn_prepare(quic_conn* conn, uint32_t idle_timeout_secs)
 {
-    return conn ? quic_get_ops()->conn.prepare(conn, idle_timeout_secs) : 0;
+    return conn ? quic_selected()->conn.prepare(conn, idle_timeout_secs) : 0;
 }
 
 /**
@@ -141,9 +169,9 @@ static inline int quic_conn_prepare(quic_conn* conn, uint32_t idle_timeout_secs)
  */
 static inline void quic_conn_set_user(quic_conn* conn, void* user)
 {
-    if (conn && quic_get_ops()->conn.set_user)
+    if (conn && quic_selected()->conn.set_user)
     {
-        quic_get_ops()->conn.set_user(conn, user);
+        quic_selected()->conn.set_user(conn, user);
     }
 }
 
@@ -155,7 +183,7 @@ static inline void quic_conn_set_user(quic_conn* conn, void* user)
  */
 static inline quic_stream* quic_conn_open_uni_stream(quic_conn* conn, int64_t* out_id)
 {
-    return quic_get_ops()->conn.open_uni_stream(conn, out_id);
+    return quic_selected()->conn.open_uni_stream(conn, out_id);
 }
 
 /**
@@ -165,7 +193,7 @@ static inline quic_stream* quic_conn_open_uni_stream(quic_conn* conn, int64_t* o
  */
 static inline quic_stream* quic_conn_accept_stream(quic_conn* conn)
 {
-    return quic_get_ops()->conn.accept_stream(conn);
+    return quic_selected()->conn.accept_stream(conn);
 }
 
 /**
@@ -175,7 +203,7 @@ static inline quic_stream* quic_conn_accept_stream(quic_conn* conn)
  */
 static inline int quic_conn_is_handshake_done(quic_conn* conn)
 {
-    return quic_get_ops()->conn.is_handshake_done(conn);
+    return quic_selected()->conn.is_handshake_done(conn);
 }
 
 /**
@@ -185,7 +213,7 @@ static inline int quic_conn_is_handshake_done(quic_conn* conn)
  */
 static inline int quic_conn_is_closed(quic_conn* conn)
 {
-    return conn ? quic_get_ops()->conn.is_closed(conn) : 1;
+    return conn ? quic_selected()->conn.is_closed(conn) : 1;
 }
 
 /**
@@ -198,7 +226,7 @@ static inline int quic_conn_is_closed(quic_conn* conn)
  */
 static inline int quic_conn_shutdown(quic_conn* conn, int is_rapid, uint64_t app_error, const char* reason)
 {
-    return conn ? quic_get_ops()->conn.shutdown(conn, is_rapid, app_error, reason) : 1;
+    return conn ? quic_selected()->conn.shutdown(conn, is_rapid, app_error, reason) : 1;
 }
 
 /**
@@ -207,9 +235,9 @@ static inline int quic_conn_shutdown(quic_conn* conn, int is_rapid, uint64_t app
  */
 static inline void quic_conn_free(quic_conn* conn)
 {
-    if (conn && quic_get_ops()->conn.free)
+    if (conn && quic_selected()->conn.free)
     {
-        quic_get_ops()->conn.free(conn);
+        quic_selected()->conn.free(conn);
     }
 }
 
@@ -220,7 +248,7 @@ static inline void quic_conn_free(quic_conn* conn)
  */
 static inline int64_t quic_stream_id(quic_stream* st)
 {
-    return quic_get_ops()->stream.id(st);
+    return quic_selected()->stream.id(st);
 }
 
 /**
@@ -233,7 +261,7 @@ static inline int64_t quic_stream_id(quic_stream* st)
  */
 static inline quic_write_result quic_stream_write(quic_stream* st, const quic_vec* vec, size_t nvec, int fin)
 {
-    return quic_get_ops()->stream.write(st, vec, nvec, fin);
+    return quic_selected()->stream.write(st, vec, nvec, fin);
 }
 
 /**
@@ -243,7 +271,7 @@ static inline quic_write_result quic_stream_write(quic_stream* st, const quic_ve
  */
 static inline int quic_stream_is_write_blocked(quic_stream* st)
 {
-    return quic_get_ops()->stream.is_write_blocked(st);
+    return quic_selected()->stream.is_write_blocked(st);
 }
 
 /**
@@ -257,7 +285,7 @@ static inline int quic_stream_is_write_blocked(quic_stream* st)
  */
 static inline int quic_stream_read(quic_stream* st, unsigned char* buf, size_t read_size, size_t* nread, int* fin)
 {
-    return quic_get_ops()->stream.read(st, buf, read_size, nread, fin);
+    return quic_selected()->stream.read(st, buf, read_size, nread, fin);
 }
 
 /**
@@ -268,7 +296,7 @@ static inline int quic_stream_read(quic_stream* st, unsigned char* buf, size_t r
  */
 static inline void quic_stream_is_read_finished(quic_stream* st, int* read_finished, int* write_finished)
 {
-    quic_get_ops()->stream.is_read_finished(st, read_finished, write_finished);
+    quic_selected()->stream.is_read_finished(st, read_finished, write_finished);
 }
 
 /**
@@ -278,9 +306,9 @@ static inline void quic_stream_is_read_finished(quic_stream* st, int* read_finis
  */
 static inline void quic_stream_stop_sending(quic_stream* st, uint64_t err)
 {
-    if (st && quic_get_ops()->stream.stop_sending)
+    if (st && quic_selected()->stream.stop_sending)
     {
-        quic_get_ops()->stream.stop_sending(st, err);
+        quic_selected()->stream.stop_sending(st, err);
     }
 }
 
@@ -291,9 +319,9 @@ static inline void quic_stream_stop_sending(quic_stream* st, uint64_t err)
  */
 static inline void quic_stream_reset(quic_stream* st, uint64_t err)
 {
-    if (st && quic_get_ops()->stream.reset)
+    if (st && quic_selected()->stream.reset)
     {
-        quic_get_ops()->stream.reset(st, err);
+        quic_selected()->stream.reset(st, err);
     }
 }
 
@@ -303,9 +331,9 @@ static inline void quic_stream_reset(quic_stream* st, uint64_t err)
  */
 static inline void quic_stream_free(quic_stream* st)
 {
-    if (st && quic_get_ops()->stream.free)
+    if (st && quic_selected()->stream.free)
     {
-        quic_get_ops()->stream.free(st);
+        quic_selected()->stream.free(st);
     }
 }
 
@@ -316,9 +344,9 @@ static inline void quic_stream_free(quic_stream* st)
  */
 static inline void quic_stream_consumed(quic_stream* st, size_t nbytes)
 {
-    if (quic_get_ops()->stream.consumed)
+    if (quic_selected()->stream.consumed)
     {
-        quic_get_ops()->stream.consumed(st, nbytes);
+        quic_selected()->stream.consumed(st, nbytes);
     }
 }
 

@@ -41,6 +41,7 @@ typedef struct h3_session h3_session;
 typedef struct h3_io_t
 {
     quic_engine* qengine;
+    quic_io qio;
     apr_pool_t* pool;
     server_rec* server;
     int udp_fd;

@@ -22,16 +22,19 @@
 #include "detail/quic_ossl_funcs.h"
 
 /**
- * Operations table for the OpenSSL QUIC engine. Sets
+ * API for the OpenSSL QUIC engine. Sets
  * caps.acks_are_write_offsets: OpenSSL reports no per-stream acknowledgements,
- * so bytes count as acked once SSL_write_ex takes them. Ops left unset are the
+ * so bytes count as acked once SSL_write_ex takes them. Entries left unset are the
  * ones this engine does not need; stop_sending among them, since OpenSSL closes
  * the receiving half as part of the stream's own teardown.
+ * @note Of quic_settings it honours max_idle_timeout_ms and address_validation.
+ *       OpenSSL fixes its own flow-control windows and congestion control, so
+ *       the initial_max_* fields, cc_algo and enable_datagrams are ignored.
  * @return Table with static storage duration; never NULL.
  */
-static inline const quic_ops* quic_ossl_ops(void)
+static inline const quic_api* quic_ossl_api(void)
 {
-    static const quic_ops ops = {
+    static const quic_api api = {
         .caps =
             {
                 .acks_are_write_offsets = 1,
@@ -40,7 +43,6 @@ static inline const quic_ops* quic_ossl_ops(void)
             {
                 .create = quic_ossl_engine_create,
                 .destroy = quic_ossl_engine_destroy,
-                .socket_configure = quic_ossl_engine_socket_configure,
                 .pump = quic_ossl_engine_pump,
                 .want = quic_ossl_engine_want,
                 .accept_conn = quic_ossl_engine_accept_conn,
@@ -71,7 +73,7 @@ static inline const quic_ops* quic_ossl_ops(void)
                 .consumed = NULL,
             },
     };
-    return &ops;
+    return &api;
 }
 
 #endif /* QUIC_OSSL_H */

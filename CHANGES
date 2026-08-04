@@ -3,6 +3,19 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.51 (2026-08-04)
+--------------------
+  *) Updated QUIC library to generalize easier. 
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Added the null QUIC engine, which implements the whole contract and
+     carries nothing as a template.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Rejected an unknown H3QuicEngine when the config is parsed,
+     so httpd -t catches it.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.50 (2026-08-03)
 --------------------
   *) Split the CI test and interop matrices per QUIC engine.

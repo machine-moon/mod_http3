@@ -16,40 +16,54 @@
  * limitations under the License.
  */
 
-#include <apr_cstr.h>
-#include <apr_strings.h>
+#include <strings.h>
 
-#include "h3_quic.h"
+#include "detail/quic_check.h"
+#include "quic.h"
+#include "quic_null.h"
 #include "quic_ossl.h"
 
 #ifdef H3_ENABLE_NGTCP2
     #include "quic_ngtcp2.h"
 #endif
 
-typedef struct quic_engine_entry
+typedef struct
 {
     const char* name;
-    const quic_ops* (*ops)(void);
-} quic_engine_entry;
+    const quic_api* (*api)(void);
+} quic_entry;
 
-static const quic_engine_entry quic_engines[] = {
-    {"openssl", quic_ossl_ops},
+/* Index 0 is the default. Adding an engine is one row, and nothing outside quic/. */
+static const quic_entry engines[] = {
+    {"openssl", quic_ossl_api},
 #ifdef H3_ENABLE_NGTCP2
-    {"ngtcp2", quic_ngtcp2_ops},
+    {"ngtcp2", quic_ngtcp2_api},
 #endif
+    {"null", quic_null_api},
 };
 
-#define QUIC_ENGINE_COUNT (sizeof(quic_engines) / sizeof(quic_engines[0]))
+#define ENGINE_COUNT (sizeof(engines) / sizeof(engines[0]))
 
-static size_t quic_active;
+static size_t active;
+
+size_t quic_engine_count(void)
+{
+    return ENGINE_COUNT;
+}
+
+const char* quic_engine_name_at(size_t i)
+{
+    return i < ENGINE_COUNT ? engines[i].name : NULL;
+}
 
 int quic_select(const char* name)
 {
-    for (size_t i = 0; i < QUIC_ENGINE_COUNT; i++)
+    QUIC_CHECK(name);
+    for (size_t i = 0; i < ENGINE_COUNT; i++)
     {
-        if (apr_cstr_casecmp(name, quic_engines[i].name) == 0)
+        if (strcasecmp(name, engines[i].name) == 0)
         {
-            quic_active = i;
+            active = i;
             return 1;
         }
     }
@@ -58,20 +72,10 @@ int quic_select(const char* name)
 
 const char* quic_engine_name(void)
 {
-    return quic_engines[quic_active].name;
+    return engines[active].name;
 }
 
-const char* quic_engine_names(apr_pool_t* pool)
+const quic_api* quic_selected(void)
 {
-    const char* list = quic_engines[0].name;
-    for (size_t i = 1; i < QUIC_ENGINE_COUNT; i++)
-    {
-        list = apr_pstrcat(pool, list, ", ", quic_engines[i].name, NULL);
-    }
-    return list;
-}
-
-const quic_ops* quic_get_ops(void)
-{
-    return quic_engines[quic_active].ops();
+    return engines[active].api();
 }

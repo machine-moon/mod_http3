@@ -51,9 +51,9 @@ static int cb_acked_stream_data_offset(ngtcp2_conn* qconn, int64_t stream_id, ui
     (void)offset;
     (void)stream_user_data;
     quic_ngtcp2_conn* conn = user_data;
-    if (conn->user && conn->engine->cfg.on_stream_acked)
+    if (conn->user && conn->engine->cfg.callbacks.stream_acked)
     {
-        conn->engine->cfg.on_stream_acked(conn->user, stream_id, datalen);
+        conn->engine->cfg.callbacks.stream_acked(conn->user, stream_id, datalen);
     }
     return 0;
 }
