@@ -3,6 +3,12 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.52 (2026-08-05)
+--------------------
+  *) Updated the dependency submodules to their current upstream revisions,
+     nghttp3 moves to v1.18.0.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.51 (2026-08-04)
 --------------------
   *) Updated QUIC library to generalize easier. 

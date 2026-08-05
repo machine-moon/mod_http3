@@ -65,7 +65,7 @@ Provide `WITH_*` variables to override individual dependencies with system-insta
 | httpd (via apxs) | `WITH_HTTPD=/path` | >= 2.4.x AND MMN >= 20211221 |
 | APR | `WITH_APR=/path` | >= 1.7.0 |
 | APU | `WITH_APU=/path` | >= 1.6.0 |
-| nghttp3 | `WITH_NGHTTP3=/path` | >= 1.17.0 |
+| nghttp3 | `WITH_NGHTTP3=/path` | >= 1.18.0 |
 
 > Distro-packaged httpd (Ubuntu, Fedora, etc.) ships with MMN < 20211221 and will fail configure. Use build-from-source mode instead.
 

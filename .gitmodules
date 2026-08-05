@@ -4,7 +4,7 @@
 	shallow = true
 	ignore = untracked
 	update = checkout
-	#branch = main # tag: v1.17.0
+	#branch = main # tag: v1.18.0
 [submodule "dependencies/httpd"]
 	path = dependencies/httpd
 	url = https://github.com/machine-moon/httpd.git

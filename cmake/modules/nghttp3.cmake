@@ -1,10 +1,10 @@
-# -- nghttp3 v1.17.0 --
+# -- nghttp3 v1.18.0 --
 
 if(TARGET nghttp3)
   return()
 endif()
 
-set(NGHTTP3_VERSION_MIN "1.17.0")
+set(NGHTTP3_VERSION_MIN "1.18.0")
 
 if(WITH_NGHTTP3)
   find_library(NGHTTP3_LIBRARY NAMES nghttp3

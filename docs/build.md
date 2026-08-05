@@ -24,7 +24,7 @@ the `WITH_*` options only if they meet these minimums.
 | Apache httpd | MMN 20211221 |
 | APR | 1.7.0 |
 | APR-util | 1.6.0 |
-| nghttp3 | 1.17.0 |
+| nghttp3 | 1.18.0 |
 
 Distribution-provided httpd packages usually have an older MMN and are rejected. Use the default source build or provide compatible custom prefixes.
 
