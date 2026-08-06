@@ -3,6 +3,15 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.53 (unreleased)
+--------------------
+  *) Rejected malformed HTTP/3 requests (missing or duplicate pseudo-header
+     fields, connection-specific fields, content-length mismatch) with a
+     stream error of type H3_MESSAGE_ERROR per RFC 9114 4.1.2. Previously
+     one malformed request closed the whole QUIC connection, ending every
+     other request in flight on it.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.52 (2026-08-05)
 --------------------
   *) Updated the dependency submodules to their current upstream revisions,
