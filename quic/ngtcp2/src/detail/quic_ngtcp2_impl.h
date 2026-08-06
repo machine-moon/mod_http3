@@ -82,6 +82,14 @@ void quic_ngtcp2_map_free(quic_ngtcp2_map* map);
 #define QUIC_NGTCP2_SCIDLEN 18
 #define QUIC_NGTCP2_MAX_UDP_PAYLOAD 1452
 #define QUIC_NGTCP2_RECV_BUDGET 64
+
+/*
+ * Per-datagram buffer of a batch read. QUIC peers keep datagrams inside the
+ * path MTU, so this is generous for a 1200-byte max_udp_payload_size while
+ * keeping a whole batch on the stack. Anything larger is dropped by the batch
+ * read rather than parsed half-complete.
+ */
+#define QUIC_NGTCP2_DGRAM_MAX 2048
 #define QUIC_NGTCP2_RETRY_TOKEN_TIMEOUT (10 * NGTCP2_SECONDS)
 
 struct quic_engine

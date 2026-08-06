@@ -81,7 +81,7 @@ endif()
 # -- unit tests --
 file(GLOB_RECURSE test_sources CONFIGURE_DEPENDS "unit/*.c")
 add_executable(${PROJECT_NAME}_tests ${test_sources})
-target_link_libraries(${PROJECT_NAME}_tests PRIVATE ${PROJECT_NAME}-deps)
+target_link_libraries(${PROJECT_NAME}_tests PRIVATE ${PROJECT_NAME}-deps ${PROJECT_NAME}-quic)
 
 # ngtcp2 is private to quic/, so the dependency test asks for it by name.
 if(ENABLE_NGTCP2)

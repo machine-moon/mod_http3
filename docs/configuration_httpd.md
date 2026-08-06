@@ -55,6 +55,14 @@ Maximum number of concurrent HTTP/3 streams (in-flight requests) per QUIC connec
 
 Maximum number of concurrent QUIC/HTTP/3 connections per child process. New connection attempts beyond the limit are refused.
 
+### H3SocketBufferSize
+
+**Syntax:** `H3SocketBufferSize bytes`
+**Context:** server config, virtual host
+**Default:** `2097152`
+
+Bytes requested for the QUIC socket's send and receive buffers (`SO_SNDBUF` and `SO_RCVBUF`). The operating system caps what it grants -- on Linux through `net.core.wmem_max` and `net.core.rmem_max` -- and a refused or capped request is logged at `info` level rather than treated as an error, so raising this alone may not take effect. A receive buffer left at the OS default overflows once a single connection runs at speed, and every dropped datagram costs a retransmit and a congestion-window reduction.
+
 ### H3StreamBufferSize
 
 **Syntax:** `H3StreamBufferSize bytes`

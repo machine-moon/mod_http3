@@ -18,31 +18,10 @@
 
 #include "sput.h"
 
-#include <apr_general.h>
-#include <stdio.h>
-
-struct sput __sput;
-
-int main(void)
+void run_quic_suite(void)
 {
-    apr_status_t rc = apr_initialize();
-    if (rc != APR_SUCCESS)
-    {
-        fprintf(stderr, "apr_initialize() failed\n");
-        return 1;
-    }
+    sput_enter_suite("quic");
 
-    sput_start_testing();
-
-    extern void run_dependencies_suite(void);
-    run_dependencies_suite();
-
-    extern void run_quic_suite(void);
-    run_quic_suite();
-
-    sput_finish_testing();
-
-    apr_terminate();
-
-    return sput_get_return_value();
+    extern void run_quic_io_udp_tests(void);
+    run_quic_io_udp_tests();
 }

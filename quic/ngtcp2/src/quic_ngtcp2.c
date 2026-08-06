@@ -430,22 +430,127 @@ const char* quic_ngtcp2_engine_last_error(quic_engine* engine)
     return engine->err;
 }
 
-/* The bound address is stable per socket, so ngtcp2 sees no path change. */
-static int recv_one(quic_engine* engine, uint8_t* buf, size_t buflen, struct sockaddr_storage* peer, socklen_t* peerlen, struct sockaddr_storage* local, socklen_t* locallen, ssize_t* nread)
+static void process_dgram(quic_engine* engine, uint8_t* buf, size_t nread, struct sockaddr_storage* peer, socklen_t peerlen, struct sockaddr_storage* local, socklen_t locallen)
 {
-    *peerlen = sizeof(*peer);
-    do
+    ngtcp2_version_cid vc;
+    int rv = ngtcp2_pkt_decode_version_cid(&vc, buf, nread, QUIC_NGTCP2_SCIDLEN);
+    if (rv != 0)
     {
-        *nread = engine->io->recv(engine->io->io_ctx, buf, buflen, peer, peerlen);
-    } while (*nread < 0 && errno == EINTR);
-
-    if (*nread < 0)
-    {
-        return 0;
+        if (rv == NGTCP2_ERR_VERSION_NEGOTIATION)
+        {
+            send_version_negotiation(engine, &vc, (struct sockaddr*)peer, peerlen);
+        }
+        return;
     }
 
-    *locallen = sizeof(*local);
-    return engine->io->local_addr(engine->io->io_ctx, local, locallen);
+    ngtcp2_cid dcid;
+    ngtcp2_cid_init(&dcid, vc.dcid, vc.dcidlen);
+    quic_ngtcp2_conn* conn = quic_ngtcp2_cid_find(engine, &dcid);
+    if (!conn)
+    {
+        conn = conn_accept(engine, buf, nread, (struct sockaddr*)peer, peerlen, (struct sockaddr*)local, locallen);
+        if (!conn)
+        {
+            return;
+        }
+    }
+    if (conn->closed || !conn->qconn)
+    {
+        return;
+    }
+
+    ngtcp2_path path = {
+        .local = {.addr = (ngtcp2_sockaddr*)local, .addrlen = (ngtcp2_socklen)locallen},
+        .remote = {.addr = (ngtcp2_sockaddr*)peer, .addrlen = (ngtcp2_socklen)peerlen},
+    };
+    ngtcp2_pkt_info pi = {0};
+    rv = ngtcp2_conn_read_pkt(conn->qconn, &path, &pi, buf, nread, quic_ngtcp2_now());
+    if (rv != 0)
+    {
+        switch (rv)
+        {
+        case NGTCP2_ERR_RETRY:
+            /* A stateless Retry is owed; the connection is not at fault. */
+            send_retry_for(engine, buf, nread, (struct sockaddr*)peer, peerlen);
+            return;
+        case NGTCP2_ERR_DROP_CONN:
+            conn->closed = 1;
+            return;
+        case NGTCP2_ERR_DRAINING:
+        case NGTCP2_ERR_CLOSING:
+            conn->closed = 1;
+            return;
+        case NGTCP2_ERR_CRYPTO:
+            conn_close_with(conn, ngtcp2_conn_get_tls_alert(conn->qconn), 1);
+            return;
+        default:
+            snprintf(engine->err, sizeof(engine->err), "ngtcp2_conn_read_pkt: %s", ngtcp2_strerror(rv));
+            engine->err_pending = 1;
+            conn_close_with(conn, (uint64_t)rv, 0);
+            return;
+        }
+    }
+    quic_ngtcp2_conn_flush(conn);
+}
+
+/* One recvmmsg() per batch instead of one recvfrom() per datagram. */
+static int pump_batched(quic_engine* engine, struct sockaddr_storage* local, socklen_t locallen)
+{
+    uint8_t bufs[QUIC_IO_RECV_BATCH][QUIC_NGTCP2_DGRAM_MAX];
+    quic_dgram dgrams[QUIC_IO_RECV_BATCH];
+    int progressed = 0;
+
+    for (int taken = 0; taken < QUIC_NGTCP2_RECV_BUDGET; taken += QUIC_IO_RECV_BATCH)
+    {
+        for (size_t i = 0; i < QUIC_IO_RECV_BATCH; i++)
+        {
+            dgrams[i].base = bufs[i];
+            dgrams[i].len = sizeof(bufs[i]);
+        }
+        quic_ssize n = engine->io->recv_batch(engine->io->io_ctx, dgrams, QUIC_IO_RECV_BATCH);
+        if (n <= 0)
+        {
+            break;
+        }
+        progressed = 1;
+        for (quic_ssize i = 0; i < n; i++)
+        {
+            if (dgrams[i].len > 0)
+            {
+                process_dgram(engine, dgrams[i].base, dgrams[i].len, &dgrams[i].peer, dgrams[i].peer_len, local, locallen);
+            }
+        }
+        if ((size_t)n < QUIC_IO_RECV_BATCH)
+        {
+            /* A short batch means the socket is drained. */
+            break;
+        }
+    }
+    return progressed;
+}
+
+static int pump_one_by_one(quic_engine* engine, struct sockaddr_storage* local, socklen_t locallen)
+{
+    uint8_t buf[65536];
+    int progressed = 0;
+
+    for (int i = 0; i < QUIC_NGTCP2_RECV_BUDGET; i++)
+    {
+        struct sockaddr_storage peer;
+        socklen_t peerlen = sizeof(peer);
+        ssize_t nread;
+        do
+        {
+            nread = engine->io->recv(engine->io->io_ctx, buf, sizeof(buf), &peer, &peerlen);
+        } while (nread < 0 && errno == EINTR);
+        if (nread < 0)
+        {
+            break;
+        }
+        progressed = 1;
+        process_dgram(engine, buf, (size_t)nread, &peer, peerlen, local, locallen);
+    }
+    return progressed;
 }
 
 int quic_ngtcp2_engine_pump(quic_engine* engine)
@@ -455,90 +560,19 @@ int quic_ngtcp2_engine_pump(quic_engine* engine)
         return 0;
     }
 
-    int progressed = 0;
-    uint8_t buf[65536];
-    for (int i = 0; i < QUIC_NGTCP2_RECV_BUDGET; i++)
+    /* The socket stays bound for the engine's lifetime, so ngtcp2 sees no path
+     * change and the local address is worth reading once per pump rather than
+     * once per datagram. */
+    struct sockaddr_storage local;
+    socklen_t locallen = sizeof(local);
+    if (!engine->io->local_addr(engine->io->io_ctx, &local, &locallen))
     {
-        struct sockaddr_storage peer;
-        struct sockaddr_storage local;
-        socklen_t peerlen = 0;
-        socklen_t locallen = 0;
-        ssize_t nread = 0;
-        if (!recv_one(engine, buf, sizeof(buf), &peer, &peerlen, &local, &locallen, &nread))
-        {
-            break;
-        }
-        progressed = 1;
-
-        ngtcp2_version_cid vc;
-        int rv = ngtcp2_pkt_decode_version_cid(&vc, buf, (size_t)nread, QUIC_NGTCP2_SCIDLEN);
-        if (rv != 0)
-        {
-            if (rv == NGTCP2_ERR_VERSION_NEGOTIATION)
-            {
-                send_version_negotiation(engine, &vc, (struct sockaddr*)&peer, peerlen);
-            }
-            continue;
-        }
-
-        ngtcp2_cid dcid;
-        ngtcp2_cid_init(&dcid, vc.dcid, vc.dcidlen);
-        quic_ngtcp2_conn* conn = quic_ngtcp2_cid_find(engine, &dcid);
-        if (!conn)
-        {
-            conn = conn_accept(engine, buf, (size_t)nread, (struct sockaddr*)&peer, peerlen, (struct sockaddr*)&local, locallen);
-            if (!conn)
-            {
-                continue;
-            }
-        }
-        if (conn->closed || !conn->qconn)
-        {
-            continue;
-        }
-
-        ngtcp2_path path = {
-            .local = {.addr = (ngtcp2_sockaddr*)&local, .addrlen = (ngtcp2_socklen)locallen},
-            .remote = {.addr = (ngtcp2_sockaddr*)&peer, .addrlen = (ngtcp2_socklen)peerlen},
-        };
-        ngtcp2_pkt_info pi = {0};
-        rv = ngtcp2_conn_read_pkt(conn->qconn, &path, &pi, buf, (size_t)nread, quic_ngtcp2_now());
-        if (rv != 0)
-        {
-            switch (rv)
-            {
-            case NGTCP2_ERR_RETRY:
-                /* A stateless Retry is owed; the connection is not at fault. */
-                send_retry_for(engine, buf, (size_t)nread, (struct sockaddr*)&peer, peerlen);
-                continue;
-            case NGTCP2_ERR_DROP_CONN:
-                conn->closed = 1;
-                continue;
-            case NGTCP2_ERR_DRAINING:
-            case NGTCP2_ERR_CLOSING:
-                conn->closed = 1;
-                continue;
-            case NGTCP2_ERR_CRYPTO:
-                conn_close_with(conn, ngtcp2_conn_get_tls_alert(conn->qconn), 1);
-                continue;
-            default:
-                snprintf(engine->err, sizeof(engine->err), "ngtcp2_conn_read_pkt: %s", ngtcp2_strerror(rv));
-                engine->err_pending = 1;
-                conn_close_with(conn, (uint64_t)rv, 0);
-                continue;
-            }
-        }
-        quic_ngtcp2_conn_flush(conn);
+        return 0;
     }
+
+    int progressed = engine->io->recv_batch ? pump_batched(engine, &local, locallen) : pump_one_by_one(engine, &local, locallen);
 
     engine_expire(engine);
-    int nconn = 0;
-    int nclosed = 0;
-    for (quic_ngtcp2_conn* c = engine->conns_head; c; c = c->next)
-    {
-        nconn++;
-        nclosed += c->closed ? 1 : 0;
-    }
     return progressed;
 }
 

@@ -3,6 +3,23 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.53 (unreleased)
+--------------------
+  *) Read queued datagrams in one batch with recvmmsg() where the platform has
+     it, and read the socket's local address once per event-loop pass instead
+     of once per datagram, halving the syscalls the ngtcp2 engine spends on a
+     busy socket. The OpenSSL engine already batches inside its own datagram
+     BIO. Also dropped a per-pass walk of the connection list whose result was
+     never used.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Added H3SocketBufferSize, which asks for the QUIC socket send and receive
+     buffer size. A receive buffer left at the OS default overflows once a
+     single connection runs at speed, and each dropped datagram costs a
+     retransmit; the OS still caps what it grants, and a capped grant is
+     logged rather than fatal.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.52 (2026-08-05)
 --------------------
   *) Updated the dependency submodules to their current upstream revisions,

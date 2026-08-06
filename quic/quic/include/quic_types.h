@@ -39,6 +39,23 @@ typedef struct quic_vec
     size_t len;
 } quic_vec;
 
+/** Datagrams a single batch read may return, and so the array a caller sizes. */
+#define QUIC_IO_RECV_BATCH 16
+
+/**
+ * One datagram of a batch read. The caller points base at a buffer and sets
+ * len to its capacity; the transport overwrites len with the bytes received
+ * and fills peer/peer_len with the source address. A len of 0 on return means
+ * the datagram did not fit and was dropped, so the caller skips it.
+ */
+typedef struct quic_dgram
+{
+    uint8_t* base;
+    size_t len;
+    struct sockaddr_storage peer;
+    socklen_t peer_len;
+} quic_dgram;
+
 typedef struct quic_write_result
 {
     size_t accepted;
@@ -137,6 +154,14 @@ typedef struct quic_io
     /* Pollable descriptor, or -1 when this transport has none. */
     int (*fd)(void* io_ctx);
     void* io_ctx;
+    /*
+     * Optional: read up to ndgrams datagrams in one call, so a busy socket
+     * costs one syscall for the batch instead of one per datagram. Returns the
+     * number of datagrams read, 0 when none are ready, or -1 on error. Left
+     * NULL where the platform or transport has no batch read, and callers then
+     * fall back to recv().
+     */
+    quic_ssize (*recv_batch)(void* io_ctx, quic_dgram* dgrams, size_t ndgrams);
 } quic_io;
 
 typedef struct quic_config
