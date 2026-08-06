@@ -5,6 +5,13 @@ Security-related entries always appear at the top of their release block.
 
 v0.0.60 (unreleased)
 --------------------
+  *) Rejected malformed HTTP/3 requests (missing or duplicate pseudo-header
+     fields, connection-specific fields, content-length mismatch) with a
+     stream error of type H3_MESSAGE_ERROR per RFC 9114 4.1.2. Previously
+     one malformed request closed the whole QUIC connection, ending every
+     other request in flight on it.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
   *) Added support for building against httpd 2.4.52+. Without response
      buckets the module removes the core HTTP_HEADER filter from its
      requests and snapshots status and headers itself, mirroring
