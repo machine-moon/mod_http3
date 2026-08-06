@@ -405,8 +405,10 @@ int service_session_pass(h3_io_t* io, h3_session* session)
         return 0;
     }
 
+    int had_activity = 0;
     for (h3q_stream* s2 = NULL; (s2 = h3q_conn_accept_stream(conn)) != NULL;)
     {
+        had_activity = 1;
         apr_atomic_inc32(&io->total_streams);
         int64_t sid = h3q_stream_id(s2);
         if (sid < 0)
@@ -447,5 +449,27 @@ int service_session_pass(h3_io_t* io, h3_session* session)
     flush_nghttp3(session);
     apr_thread_mutex_unlock(session->lock);
     apr_pool_destroy(scratch);
+
+    if (data_read || completed->nelts > 0)
+    {
+        had_activity = 1;
+    }
+    if (had_activity)
+    {
+        session->last_activity = apr_time_now();
+    }
+    else if (io->thread_running && apr_atomic_read32(&session->active_tasks) == 0)
+    {
+        /* The QUIC stack defeats the transport-level idle timeout by
+         * keepalive-pinging the peer, so enforce H3IdleTimeout here once the
+         * session has no application progress (see h3_session::last_activity). */
+        h3_server_conf* conf = ap_get_module_config(s->module_config, &http3_module);
+        if (conf && apr_time_now() - session->last_activity >= apr_time_from_sec(conf->h3_idle_timeout))
+        {
+            ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "closing HTTP/3 connection idle for %u second(s)", (unsigned)conf->h3_idle_timeout);
+            session->abort_quic_error_code = NGHTTP3_H3_NO_ERROR;
+            session->aborted = 1;
+        }
+    }
     return data_read;
 }

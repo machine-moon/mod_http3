@@ -64,6 +64,13 @@ struct h3_session
     int control_streams_created;
     apr_time_t goaway_deadline;
 
+    /// Time of the last application-level progress (stream opened, request
+    /// data read, request dispatched, response data acknowledged). Drives the
+    /// module's own idle enforcement: transport-level idle timeouts never
+    /// fire when the QUIC stack keepalive-pings the peer (OpenSSL pings at
+    /// half the idle interval, RFC 9000 s. 10.1.2).
+    apr_time_t last_activity;
+
     volatile apr_uint32_t active_tasks;
 
     struct
