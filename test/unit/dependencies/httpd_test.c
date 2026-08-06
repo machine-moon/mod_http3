@@ -16,13 +16,24 @@
  * limitations under the License.
  */
 
-#include "sput.h"
 #include <httpd.h>
+
+#include <ap_release.h>
+
+#include "sput.h"
+
+#include "h3.h"
 
 static void test_httpd_version(void)
 {
     sput_fail_unless(AP_SERVER_MAJORVERSION_NUMBER == 2, "httpd major version == 2");
-    sput_fail_unless(AP_SERVER_MINORVERSION_NUMBER == 5, "httpd minor version == 5");
+#if H3_DEVEL
+    sput_fail_unless(AP_SERVER_MINORVERSION_NUMBER == 5, "development line is 2.5.x");
+    sput_fail_unless(AP_SERVER_PATCHLEVEL_NUMBER >= 1, "development httpd is at least 2.5.1");
+#else
+    sput_fail_unless(AP_SERVER_MINORVERSION_NUMBER == 4, "stable line is 2.4.x");
+    sput_fail_unless(AP_SERVER_PATCHLEVEL_NUMBER >= 69, "stable httpd is at least 2.4.69");
+#endif
 }
 
 static void test_httpd_status_codes(void)

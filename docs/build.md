@@ -20,7 +20,7 @@ clones OpenSSL's external test submodules, which the build never uses.
 | Dependency | Minimum |
 | --- | --- |
 | OpenSSL | 3.5.0 with QUIC support |
-| Apache httpd | MMN 20211221 |
+| Apache httpd | 2.5.1+ or 2.4.69+ |
 | APR | 1.7.0 |
 | APR-util | 1.6.0 |
 | nghttp3 | 1.18.0 |
