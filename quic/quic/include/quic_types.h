@@ -56,6 +56,14 @@ typedef struct quic_write_result
 typedef struct quic_caps
 {
     unsigned acks_are_write_offsets : 1;
+    /*
+     * Set only where the engine can actually accept 0-RTT application data on a
+     * resumed connection. A caller asked for early data must consult this and
+     * report that the setting has no effect rather than assume it took, because
+     * an engine that answers 0 completes the handshake before any request is
+     * read no matter what settings.early_data says.
+     */
+    unsigned early_data : 1;
 } quic_caps;
 
 /** Where an engine reads its certificate and private key from. */
@@ -110,6 +118,17 @@ typedef struct quic_settings
     quic_cc_algo cc_algo;
     unsigned enable_datagrams : 1;
     unsigned address_validation : 1;
+    /*
+     * Issue TLS 1.3 session tickets, so a returning client can resume instead
+     * of running a full handshake with another certificate verification. Each
+     * worker process keeps its own ticket keys, so a client resumes only when
+     * it returns to the process that issued the ticket; otherwise the server
+     * falls back to a full handshake.
+     */
+    unsigned session_tickets : 1;
+    /* Accept 0-RTT data on resumed connections; honoured only by an engine
+     * whose caps.early_data is set. */
+    unsigned early_data : 1;
 } quic_settings;
 
 /**

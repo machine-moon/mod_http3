@@ -35,5 +35,7 @@ void quic_settings_default(quic_settings* s)
         .cc_algo = QUIC_CC_DEFAULT,
         .enable_datagrams = 0,
         .address_validation = 1,
+        .session_tickets = 1,
+        .early_data = 0,
     };
 }

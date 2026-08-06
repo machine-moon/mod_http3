@@ -129,6 +129,25 @@ SSL_CTX* quic_tls_ctx_create(const SSL_METHOD* method, const quic_config* cfg, c
         return NULL;
     }
 
+    /* Named so tickets this server issues are only resumed against this
+     * server's sessions. */
+    static const unsigned char sid_ctx[] = "mod_http3";
+    SSL_CTX_set_session_id_context(ssl_ctx, sid_ctx, sizeof(sid_ctx) - 1);
+
+    if (!cfg->settings.session_tickets)
+    {
+        /* TLS 1.3 resumption travels in tickets, so issuing none turns it off. */
+        SSL_CTX_set_num_tickets(ssl_ctx, 0);
+    }
+
+    if (cfg->settings.early_data)
+    {
+        /* RFC 9001 s. 4.6.1: over QUIC the early_data extension carries
+         * max_early_data_size 0xffffffff and nothing else; the byte limit lives
+         * in the transport parameters. */
+        SSL_CTX_set_max_early_data(ssl_ctx, 0xffffffffu);
+    }
+
     SSL_CTX_set_alpn_select_cb(ssl_ctx, quic_tls_alpn_select_cb, NULL);
     if (getenv("SSLKEYLOGFILE"))
     {

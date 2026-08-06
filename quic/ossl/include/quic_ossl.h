@@ -27,9 +27,12 @@
  * so bytes count as acked once SSL_write_ex takes them. Entries left unset are the
  * ones this engine does not need; stop_sending among them, since OpenSSL closes
  * the receiving half as part of the stream's own teardown.
- * @note Of quic_settings it honours max_idle_timeout_ms and address_validation.
- *       OpenSSL fixes its own flow-control windows and congestion control, so
- *       the initial_max_* fields, cc_algo and enable_datagrams are ignored.
+ * Leaves caps.early_data clear: OpenSSL's own QUIC stack does not accept 0-RTT
+ * on the server side, so settings.early_data cannot take effect here.
+ * @note Of quic_settings it honours max_idle_timeout_ms, address_validation and
+ *       session_tickets. OpenSSL fixes its own flow-control windows and
+ *       congestion control, so the initial_max_* fields, cc_algo and
+ *       enable_datagrams are ignored.
  * @return Table with static storage duration; never NULL.
  */
 static inline const quic_api* quic_ossl_api(void)

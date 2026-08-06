@@ -3,6 +3,21 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.53 (unreleased)
+--------------------
+  *) Added H3SessionTickets, which controls whether TLS 1.3 session tickets are
+     issued so a returning client can resume instead of running a full
+     handshake. Tickets stay on by default, as before, and each worker process
+     keeps its own ticket keys, so a client resumes only when it returns to the
+     process that issued its ticket.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Added H3EarlyData, off by default, together with an engine capability bit
+     saying whether 0-RTT can be accepted at all. The OpenSSL QUIC stack has no
+     server-side 0-RTT, so turning early data on there now logs a warning that
+     names the engine instead of silently doing nothing.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.52 (2026-08-05)
 --------------------
   *) Updated the dependency submodules to their current upstream revisions,

@@ -141,6 +141,8 @@ apr_status_t h3_io_listen_start(apr_pool_t* pchild, server_rec* s, h3_server_con
     quic_settings_default(&qcfg.settings);
     qcfg.settings.max_idle_timeout_ms = (uint64_t)conf->h3_idle_timeout * 1000;
     qcfg.settings.address_validation = (conf->h3_address_validation != H3_FLAG_OFF);
+    qcfg.settings.session_tickets = (conf->h3_session_tickets != H3_FLAG_OFF);
+    qcfg.settings.early_data = (conf->h3_early_data == H3_FLAG_ON);
     quic_io_udp_init(&io->qio, udp_fd);
     io->qengine = quic_engine_create(&qcfg, qerr, sizeof(qerr));
     if (!io->qengine)

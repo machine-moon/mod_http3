@@ -89,6 +89,8 @@ class H3Conf(HttpdConf):
         h3_idle_timeout=None,
         h3_address_validation=None,
         h3_quic_engine=None,
+        h3_session_tickets=None,
+        h3_early_data=None,
         extra_lines=None
     ):
         self.start_vhost(
@@ -125,6 +127,12 @@ class H3Conf(HttpdConf):
         if h3_address_validation is not None:
             val = "on" if h3_address_validation is True else ("off" if h3_address_validation is False else h3_address_validation)
             self.add(f"H3AddressValidation {val}")
+        if h3_session_tickets is not None:
+            val = "on" if h3_session_tickets is True else ("off" if h3_session_tickets is False else h3_session_tickets)
+            self.add(f"H3SessionTickets {val}")
+        if h3_early_data is not None:
+            val = "on" if h3_early_data is True else ("off" if h3_early_data is False else h3_early_data)
+            self.add(f"H3EarlyData {val}")
         engine = h3_quic_engine or os.environ.get("H3_QUIC_ENGINE")
         if engine:
             self.add(f"H3QuicEngine {engine}")
