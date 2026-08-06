@@ -391,6 +391,14 @@ quic_engine* quic_ngtcp2_engine_create(const quic_config* cfg, char* err, size_t
         return NULL;
     }
 
+    engine->local_addr_len = (socklen_t)sizeof(engine->local_addr);
+    if (!engine->io->local_addr(engine->io->io_ctx, &engine->local_addr, &engine->local_addr_len))
+    {
+        quic_tls_error(err, errlen, "the io layer could not report the bound local address");
+        quic_ngtcp2_engine_destroy(engine);
+        return NULL;
+    }
+
     engine->ssl_ctx = quic_ngtcp2_tls_ctx_create(cfg, err, errlen);
     if (!engine->ssl_ctx)
     {
@@ -560,17 +568,8 @@ int quic_ngtcp2_engine_pump(quic_engine* engine)
         return 0;
     }
 
-    /* The socket stays bound for the engine's lifetime, so ngtcp2 sees no path
-     * change and the local address is worth reading once per pump rather than
-     * once per datagram. */
-    struct sockaddr_storage local;
-    socklen_t locallen = sizeof(local);
-    if (!engine->io->local_addr(engine->io->io_ctx, &local, &locallen))
-    {
-        return 0;
-    }
-
-    int progressed = engine->io->recv_batch ? pump_batched(engine, &local, locallen) : pump_one_by_one(engine, &local, locallen);
+    /* The local address was resolved once at create; see quic_engine. */
+    int progressed = engine->io->recv_batch ? pump_batched(engine, &engine->local_addr, engine->local_addr_len) : pump_one_by_one(engine, &engine->local_addr, engine->local_addr_len);
 
     engine_expire(engine);
     return progressed;

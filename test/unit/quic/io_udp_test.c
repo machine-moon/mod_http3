@@ -160,7 +160,7 @@ static void test_recv_batch_drops_a_datagram_that_does_not_fit(void)
 
     /* Larger than the slot: a half-read packet is not decodable as QUIC, so the
      * batch must report it empty and keep going rather than hand up a prefix. */
-    static uint8_t big[1200];
+    uint8_t big[1200];
     memset(big, 'x', sizeof(big));
     sendto(fds[1], big, sizeof(big), 0, (struct sockaddr*)&to, sizeof(to));
     sput_fail_unless(wait_readable(fds[0]), "the receiving socket becomes readable");

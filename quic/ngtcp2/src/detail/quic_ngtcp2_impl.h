@@ -100,6 +100,11 @@ struct quic_engine
     const quic_io* io;
     int validate_addr;
     uint64_t idle_timeout_ns;
+    /* The socket is bound before the engine exists and stays bound for its
+     * lifetime, so ngtcp2 sees one unchanging local path. Read once at create
+     * rather than asking the kernel again on every event-loop pass. */
+    struct sockaddr_storage local_addr;
+    socklen_t local_addr_len;
     uint8_t secret[32];
     quic_ngtcp2_map conns;
     quic_ngtcp2_conn* conns_head;
