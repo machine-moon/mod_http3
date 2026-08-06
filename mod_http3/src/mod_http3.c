@@ -57,9 +57,6 @@ static void register_hooks(apr_pool_t* /*p*/)
 
     ap_hook_child_init(h3_child_init, NULL, NULL, APR_HOOK_MIDDLE);
     ap_hook_child_stopping(h3_c1_child_stopping, NULL, NULL, APR_HOOK_MIDDLE);
-#ifdef AP_HAS_RESPONSE_BUCKETS
-    #error Not supported for the moment.
-#endif
 }
 
 HTTP3_PUBLIC module http3_module = {

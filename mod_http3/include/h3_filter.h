@@ -25,12 +25,19 @@
 
 #include <apr_buckets.h>
 #include <apr_pools.h>
+#include <apr_tables.h>
+
+#include "h3_compat.h"
 
 struct h3_stream;
 
 typedef struct h3_conn_ctx_t
 {
-    ap_bucket_response* resp;
+    /// Final response status captured from the handler, or 0 until captured.
+    int resp_status;
+    /// Final response headers captured from the handler, or NULL. Filled from
+    /// the ap_bucket_response on trunk, or by h3_response_finalize on 2.4.x.
+    apr_table_t* resp_headers;
     char* dataheap;
     apr_size_t dataheaplen;
     apr_size_t dataheapcap;

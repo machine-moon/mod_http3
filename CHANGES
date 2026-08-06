@@ -3,6 +3,21 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.53 (unreleased)
+--------------------
+  *) Added support for building against httpd 2.4.52+. Without response
+     buckets the module removes the core HTTP_HEADER filter from its
+     requests and snapshots status and headers itself, mirroring
+     mod_http2's !AP_HAS_RESPONSE_BUCKETS path.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Made the MPM connection-count notifications optional. Stock 2.4.x
+     MPMs do not provide them; the module then runs in a degraded mode
+     where a graceful child stop does not wait for active QUIC
+     connections to drain. The patch in .patches/httpd-2.4.66-pr699.patch
+     adds the notifications to httpd 2.4.x.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.52 (2026-08-05)
 --------------------
   *) Updated the dependency submodules to their current upstream revisions,

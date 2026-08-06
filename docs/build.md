@@ -21,12 +21,12 @@ the `WITH_*` options only if they meet these minimums.
 | Dependency | Minimum |
 | --- | --- |
 | OpenSSL | 3.5.0 with QUIC support |
-| Apache httpd | MMN 20211221 |
+| Apache httpd | trunk (MMN 20211221) or 2.4.52+ |
 | APR | 1.7.0 |
 | APR-util | 1.6.0 |
 | nghttp3 | 1.18.0 |
 
-Distribution-provided httpd packages usually have an older MMN and are rejected. Use the default source build or provide compatible custom prefixes.
+Against httpd trunk the module consumes response buckets directly; against 2.4.x it uses a built-in compatibility path (see `mod_http3/include/h3_compat.h`) that captures the response the way the core `HTTP_HEADER` filter would. On stock MPMs, which lack the optional `ap_mpm_note_extra_connection_added`/`_removed` functions, the module runs in a degraded mode where a graceful child stop does not wait for active QUIC connections to drain; the MPM patch in `.patches/httpd-2.4.66-pr699.patch` restores that.
 
 ## QUIC engine
 

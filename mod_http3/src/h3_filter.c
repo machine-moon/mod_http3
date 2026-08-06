@@ -36,9 +36,11 @@
 
 #include "h3.h"
 #include "h3_check.h"
+#include "h3_compat.h"
 #include "h3_config.h"
 #include "h3_filter.h"
 #include "h3_request.h"
+#include "h3_response_compat.h"
 #include "h3_session.h"
 #include "mod_http3.h"
 
@@ -195,13 +197,15 @@ apr_status_t h3_filter_out_proto(ap_filter_t* f, apr_bucket_brigade* bb)
             ap_send_error_response(f->r, 0);
             return OK;
         }
+#if H3_HAS_RESPONSE_BUCKETS
         if (AP_BUCKET_IS_RESPONSE(b))
         {
-            ctx->resp = b->data;
-            if (ctx->resp->headers)
+            ap_bucket_response* resp = b->data;
+            ctx->resp_status = resp->status;
+            if (resp->headers)
             {
-                apr_table_t* dup = apr_table_make(ctx->c3reqpool, apr_table_elts(ctx->resp->headers)->nelts);
-                const apr_array_header_t* src_arr = apr_table_elts(ctx->resp->headers);
+                apr_table_t* dup = apr_table_make(ctx->c3reqpool, apr_table_elts(resp->headers)->nelts);
+                const apr_array_header_t* src_arr = apr_table_elts(resp->headers);
                 const apr_table_entry_t* src = (const apr_table_entry_t*)src_arr->elts;
                 for (int i = 0; i < src_arr->nelts; i++)
                 {
@@ -210,10 +214,10 @@ apr_status_t h3_filter_out_proto(ap_filter_t* f, apr_bucket_brigade* bb)
                         apr_table_add(dup, apr_pstrdup(ctx->c3reqpool, src[i].key), apr_pstrdup(ctx->c3reqpool, src[i].val));
                     }
                 }
-                ctx->resp->headers = dup;
+                ctx->resp_headers = dup;
             }
-            ctx->resp->pool = ctx->c3reqpool;
             APR_BUCKET_REMOVE(b);
+            apr_bucket_destroy(b);
             if (ctx->streaming)
             {
                 apr_status_t rv = h3_response_start(f->r, ctx);
@@ -223,8 +227,19 @@ apr_status_t h3_filter_out_proto(ap_filter_t* f, apr_bucket_brigade* bb)
                     return rv;
                 }
             }
+            b = next;
+            continue;
         }
-        else if (!APR_BUCKET_IS_METADATA(b))
+#else
+        /* No response buckets on this httpd: freeze status and headers the
+         * way the (removed) core HTTP_HEADER filter would, at the first body
+         * byte, flush or EOS. */
+        if (!ctx->resp_headers && (!APR_BUCKET_IS_METADATA(b) || APR_BUCKET_IS_EOS(b) || APR_BUCKET_IS_FLUSH(b)))
+        {
+            h3_response_finalize(f->r, ctx);
+        }
+#endif
+        if (!APR_BUCKET_IS_METADATA(b))
         {
             apr_status_t rv;
             if (ctx->streaming)

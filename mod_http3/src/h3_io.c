@@ -154,9 +154,13 @@ apr_status_t h3_io_listen_start(apr_pool_t* pchild, server_rec* s, h3_server_con
     io->note_conn_removed = APR_RETRIEVE_OPTIONAL_FN(ap_mpm_note_extra_connection_removed);
     if (!io->note_conn_added || !io->note_conn_removed)
     {
-        ap_log_error(APLOG_MARK, APLOG_EMERG, 0, s, "active MPM '%s' lacks connection-count notifications; upgrade your httpd to a version that supports mod_http3", ap_show_mpm());
-        teardown(io);
-        return APR_EGENERAL;
+        /* Both or neither: asymmetric counting would corrupt the MPM's
+         * connection count. Stock MPMs lack these notifications; run in a
+         * degraded mode where a graceful child stop does not wait for
+         * active QUIC connections to drain. */
+        io->note_conn_added = NULL;
+        io->note_conn_removed = NULL;
+        ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s, "active MPM '%s' does not report externally accepted connections; graceful child shutdown may end active HTTP/3 connections early (an MPM with ap_mpm_note_extra_connection_added/_removed avoids this)", ap_show_mpm());
     }
 
     io->thread_running = 1;
