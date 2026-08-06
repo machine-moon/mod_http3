@@ -1,0 +1,239 @@
+diff --git a/include/mpm_common.h b/include/mpm_common.h
+index 6b3d1f5..154df9a 100644
+--- a/include/mpm_common.h
++++ b/include/mpm_common.h
+@@ -40,6 +40,7 @@
+ #include "ap_config.h"
+ #include "ap_mpm.h"
+ #include "scoreboard.h"
++#include "apr_optional.h"
+ 
+ #if APR_HAVE_NETINET_TCP_H
+ #include <netinet/tcp.h>    /* for TCP_NODELAY */
+@@ -479,6 +480,20 @@ AP_DECLARE_HOOK(void, child_stopping,
+  */
+ void mpm_common_pre_config(apr_pool_t *pconf);
+ 
++/**
++ * Hooks for modules to report connections the MPM did not accept itself.
++ *
++ * MPMs that wait for their connection count to drain before stopping a child
++ * need this so externally accepted connections keep the child alive until
++ * they finish.
++ *
++ * Call ap_mpm_note_extra_connection_added() when such a connection starts,
++ * and ap_mpm_note_extra_connection_removed() when it ends. These functions
++ * may be NULL if the active MPM does not implement them.
++ */
++APR_DECLARE_OPTIONAL_FN(void, ap_mpm_note_extra_connection_added, (void));
++APR_DECLARE_OPTIONAL_FN(void, ap_mpm_note_extra_connection_removed, (void));
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/server/mpm/event/event.c b/server/mpm/event/event.c
+index 050d823..48119ca 100644
+--- a/server/mpm/event/event.c
++++ b/server/mpm/event/event.c
+@@ -828,6 +828,21 @@ static apr_status_t decrement_connection_count(void *cs_)
+     return APR_SUCCESS;
+ }
+ 
++static void ap_mpm_note_extra_connection_added(void)
++{
++    apr_atomic_inc32(&connection_count);
++}
++
++static void ap_mpm_note_extra_connection_removed(void)
++{
++    int is_last_connection = !apr_atomic_dec32(&connection_count);
++
++    /* Wake a listener blocked waiting for connection_count to drain. */
++    if (listener_is_wakeable && is_last_connection && listener_may_exit) {
++        apr_pollset_wakeup(event_pollset);
++    }
++}
++
+ static void notify_suspend(event_conn_state_t *cs)
+ {
+     ap_run_suspend_connection(cs->c, cs->r);
+@@ -3466,6 +3481,10 @@ static void setup_slave_conn(conn_rec *c, void *csd)
+     event_conn_state_t *cs;
+     
+     mcs = ap_get_module_config(c->master->conn_config, &mpm_event_module);
++    if (!mcs) {
++        /* Master connection is not managed by this MPM; nothing to inherit. */
++        return;
++    }
+     
+     cs = apr_pcalloc(c->pool, sizeof(*cs));
+     cs->c = c;
+@@ -3607,6 +3626,9 @@ static int event_pre_config(apr_pool_t * pconf, apr_pool_t * plog,
+     const char *userdata_key = "mpm_event_module";
+     int test_atomics = 0;
+ 
++    APR_REGISTER_OPTIONAL_FN(ap_mpm_note_extra_connection_added);
++    APR_REGISTER_OPTIONAL_FN(ap_mpm_note_extra_connection_removed);
++
+     debug = ap_exists_config_define("DEBUG");
+ 
+     if (debug) {
+diff --git a/server/mpm/prefork/prefork.c b/server/mpm/prefork/prefork.c
+index b5adb57..2640972 100644
+--- a/server/mpm/prefork/prefork.c
++++ b/server/mpm/prefork/prefork.c
+@@ -18,6 +18,7 @@
+ #include "apr_portable.h"
+ #include "apr_strings.h"
+ #include "apr_thread_proc.h"
++#include "apr_atomic.h"
+ #include "apr_signal.h"
+ 
+ #define APR_WANT_STDIO
+@@ -88,6 +89,7 @@
+ 
+ /* config globals */
+ 
++static apr_uint32_t connection_count = 0;   /* Number of open connections */
+ static int ap_daemons_to_start=0;
+ static int ap_daemons_min_free=0;
+ static int ap_daemons_max_free=0;
+@@ -215,19 +217,24 @@ static void prefork_note_child_started(int slot, pid_t pid)
+ }
+ 
+ /* a clean exit from a child with proper cleanup */
+-static void clean_child_exit(int code) __attribute__ ((noreturn));
+-static void clean_child_exit(int code)
++static void clean_child_exit_ex(int code, int from_signal)
++    __attribute__ ((noreturn));
++static void clean_child_exit_ex(int code, int from_signal)
+ {
+     retained->mpm->mpm_state = AP_MPMQ_STOPPING;
+ 
+     apr_signal(SIGHUP, SIG_IGN);
+     apr_signal(SIGTERM, SIG_IGN);
+ 
+-    if (code == 0) {
+-        ap_run_child_stopping(pchild, 0);
+-    }
+-
+     if (pchild) {
++        if (!code && !from_signal) {
++            ap_run_child_stopping(pchild, !retained->mpm->is_ungraceful);
++            if (!retained->mpm->is_ungraceful) {
++                while (apr_atomic_read32(&connection_count) > 0) {
++                    apr_sleep(apr_time_from_msec(100));
++                }
++            }
++        }
+         apr_pool_destroy(pchild);
+     }
+ 
+@@ -240,6 +247,13 @@ static void clean_child_exit(int code)
+     exit(code);
+ }
+ 
++/* a clean exit from a child with proper cleanup */
++static void clean_child_exit(int code) __attribute__ ((noreturn));
++static void clean_child_exit(int code)
++{
++    clean_child_exit_ex(code, 0);
++}
++
+ static apr_status_t accept_mutex_on(void)
+ {
+     apr_status_t rv = apr_proc_mutex_lock(my_bucket->mutex);
+@@ -356,12 +370,22 @@ static const char *prefork_get_name(void)
+ 
+ static void just_die(int sig)
+ {
+-    clean_child_exit(0);
++    clean_child_exit_ex(0, 1);
+ }
+ 
+ /* volatile because it's updated from a signal handler */
+ static int volatile die_now = 0;
+ 
++static void ap_mpm_note_extra_connection_added(void)
++{
++    apr_atomic_inc32(&connection_count);
++}
++
++static void ap_mpm_note_extra_connection_removed(void)
++{
++    apr_atomic_dec32(&connection_count);
++}
++
+ static void stop_listening(int sig)
+ {
+     retained->mpm->mpm_state = AP_MPMQ_STOPPING;
+@@ -1286,6 +1310,9 @@ static int prefork_pre_config(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp
+     apr_status_t rv;
+     const char *userdata_key = "mpm_prefork_module";
+ 
++    APR_REGISTER_OPTIONAL_FN(ap_mpm_note_extra_connection_added);
++    APR_REGISTER_OPTIONAL_FN(ap_mpm_note_extra_connection_removed);
++
+     debug = ap_exists_config_define("DEBUG");
+ 
+     if (debug) {
+diff --git a/server/mpm/worker/worker.c b/server/mpm/worker/worker.c
+index 315371d..0d0a3d0 100644
+--- a/server/mpm/worker/worker.c
++++ b/server/mpm/worker/worker.c
+@@ -30,6 +30,7 @@
+ #include "apr_thread_mutex.h"
+ #include "apr_proc_mutex.h"
+ #include "apr_poll.h"
++#include "apr_atomic.h"
+ 
+ #include <stdlib.h>
+ 
+@@ -116,6 +117,7 @@
+  * Actual definitions of config globals
+  */
+ 
++static apr_uint32_t connection_count = 0;   /* Number of open connections */
+ static int threads_per_child = 0;     /* Worker threads per child */
+ static int ap_daemons_to_start = 0;
+ static int min_spare_threads = 0;
+@@ -506,6 +508,16 @@ static void check_infinite_requests(void)
+     }
+ }
+ 
++static void ap_mpm_note_extra_connection_added(void)
++{
++    apr_atomic_inc32(&connection_count);
++}
++
++static void ap_mpm_note_extra_connection_removed(void)
++{
++    apr_atomic_dec32(&connection_count);
++}
++
+ static void unblock_signal(int sig)
+ {
+     sigset_t sig_mask;
+@@ -1301,6 +1313,12 @@ static void child_main(int child_num_arg, int child_bucket)
+                      rv == AP_MPM_PODX_GRACEFUL ? ST_GRACEFUL : ST_UNGRACEFUL);
+     }
+ 
++    if (terminate_mode == ST_GRACEFUL) {
++        while (apr_atomic_read32(&connection_count) > 0) {
++            apr_sleep(apr_time_from_msec(100));
++        }
++    }
++
+     free(threads);
+ 
+     clean_child_exit(resource_shortage ? APEXIT_CHILDSICK : 0);
+@@ -2059,6 +2077,9 @@ static int worker_pre_config(apr_pool_t *pconf, apr_pool_t *plog,
+     apr_status_t rv;
+     const char *userdata_key = "mpm_worker_module";
+ 
++    APR_REGISTER_OPTIONAL_FN(ap_mpm_note_extra_connection_added);
++    APR_REGISTER_OPTIONAL_FN(ap_mpm_note_extra_connection_removed);
++
+     debug = ap_exists_config_define("DEBUG");
+ 
+     if (debug) {

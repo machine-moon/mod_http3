@@ -20,13 +20,15 @@ clones OpenSSL's external test submodules, which the build never uses.
 | Dependency | Minimum |
 | --- | --- |
 | OpenSSL | 3.5.0 with QUIC support |
-| Apache httpd | MMN 20211221 |
+| Apache httpd | trunk (MMN 20211221) or 2.4.52+ |
 | APR | 1.7.0 |
 | APR-util | 1.6.0 |
 | nghttp3 | 1.18.0 |
 
 The submodule build produces these. Supply your own with the `WITH_*` options
-only if they meet the minimums; a distribution httpd is usually rejected on MMN.
+only if they meet the minimums; a distribution httpd is accepted from 2.4.52 on.
+
+Against httpd trunk the module consumes response buckets directly; against 2.4.x it uses a built-in compatibility path (see `mod_http3/include/h3_compat.h`) that captures the response the way the core `HTTP_HEADER` filter would. On stock MPMs, which lack the optional `ap_mpm_note_extra_connection_added`/`_removed` functions, the module runs in a degraded mode where a graceful child stop does not wait for active QUIC connections to drain; the MPM patch in `.patches/httpd-2.4.66-pr699.patch` restores that.
 
 ## Custom Prefixes
 
