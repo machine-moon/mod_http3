@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(mod_http3 VERSION 0.0.49)
+project(mod_http3 VERSION 0.0.50)
 
 # -- Compiler and Build Type Checks --
-if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
-  message(FATAL_ERROR "Unsupported compiler ${CMAKE_C_COMPILER_ID}. Only GCC is supported for now.")
+if(NOT CMAKE_C_COMPILER_ID MATCHES "^(GNU|MSVC)$")
+  message(FATAL_ERROR "Unsupported compiler ${CMAKE_C_COMPILER_ID}. Only GCC and MSVC are supported.")
 endif()
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
@@ -80,6 +80,10 @@ if(BUILD_MODULE)
   target_link_libraries(${PROJECT_NAME}-lib PRIVATE ${PROJECT_NAME}-deps)
 
   set_target_properties(${PROJECT_NAME}-lib PROPERTIES PREFIX "" OUTPUT_NAME "${PROJECT_NAME}")
+  if(WIN32)
+    # httpd loads modules by literal filename; .dll would never be found.
+    set_target_properties(${PROJECT_NAME}-lib PROPERTIES SUFFIX ".so")
+  endif()
   apply_target_flags(${PROJECT_NAME}-lib)
 endif()
 

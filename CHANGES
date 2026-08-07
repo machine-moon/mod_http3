@@ -3,6 +3,14 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.50 (2026-08-06)
+--------------------
+  *) Named the Windows module mod_http3.so, not the CMake default .dll.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Added Windows socket support and marked unnamed parameters H3_UNUSED.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.49 (2026-08-05)
 --------------------
   *) Dropped an oversized datagram instead of wedging the event thread.
