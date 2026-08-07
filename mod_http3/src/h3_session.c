@@ -82,6 +82,18 @@ apr_status_t h3_session_create(h3_session** psession, server_rec* s, h3q_conn* q
     nghttp3_callbacks cb = {.acked_stream_data = on_acked_stream_data, .recv_header = on_recv_header, .end_headers = on_end_headers, .recv_data = on_recv_data, .stream_close = on_stream_close, .begin_headers = on_begin_headers, .stop_sending = on_stop_sending, .reset_stream = on_reset_stream};
     nghttp3_settings settings = {0};
     nghttp3_settings_default(&settings);
+
+    /* nghttp3 defaults max_field_section_size to (1<<62)-1, so without this the
+     * server advertises no bound on request header size at all and a client is
+     * entitled to send an arbitrarily large field section. Advertise what the
+     * core limits already permit -- RFC 9114 4.2.2 sizes a field as
+     * name + value + 32 -- so a conforming client stops before it gets there
+     * and nghttp3 rejects one that does not. Either limit set to 0 means
+     * unlimited in httpd, and then the nghttp3 default stands. */
+    if (s->limit_req_fields > 0 && s->limit_req_fieldsize > 0)
+    {
+        settings.max_field_section_size = (uint64_t)s->limit_req_fields * ((uint64_t)s->limit_req_fieldsize + 32);
+    }
     if (nghttp3_conn_server_new(&session->ngh3, &cb, &settings, nghttp3_mem_default(), session) != 0)
     {
         ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "nghttp3_conn_server_new failed");

@@ -125,6 +125,11 @@ struct h3_stream
     size_t request_body_capacity;
     int request_body_overflow;
 
+    /// Regular header fields accepted so far, against LimitRequestFields.
+    int header_count;
+    /// Set once the field count or one field's size exceeds the core limits.
+    int headers_too_large;
+
     const char* method;
     const char* scheme;
     const char* authority;

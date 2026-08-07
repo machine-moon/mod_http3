@@ -5,6 +5,15 @@ Security-related entries always appear at the top of their release block.
 
 v0.0.60 (unreleased)
 --------------------
+  *) Applied the core LimitRequestFields and LimitRequestFieldSize limits to
+     HTTP/3 requests, and advertised the resulting bound as the HTTP/3
+     SETTINGS_MAX_FIELD_SECTION_SIZE. httpd enforces these while parsing an
+     HTTP/1 message, so nothing applied them to fields that arrive already
+     decoded: the server advertised nghttp3's default of (1<<62)-1 and header
+     fields accumulated in the stream pool without any bound. An over-limit
+     request is now answered with 431 and the connection keeps serving.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
   *) Published the mod_ssl TLS environment for HTTP/3 requests: SSL_PROTOCOL,
      SSL_CIPHER, SSL_CIPHER_USEKEYSIZE, SSL_CIPHER_ALGKEYSIZE,
      SSL_CIPHER_EXPORT and SSL_SESSION_RESUMED, under the names mod_ssl uses.
