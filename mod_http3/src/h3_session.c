@@ -228,10 +228,20 @@ apr_status_t h3_stream_response_append(h3_stream* stream, const uint8_t* data, s
         return APR_EINVAL;
     }
     h3_session* session = stream->session;
+    /* A client that opens a stream and then stops reading leaves this worker
+     * blocked on the queue with nothing to abort it: the transport stays alive
+     * on keepalives and the idle reaper skips sessions that still have a task
+     * running. Bound the wait so a handful of such clients cannot occupy every
+     * worker in the pool. */
+    h3_server_conf* conf = ap_get_module_config(session->s->module_config, &http3_module);
+    apr_interval_time_t stall_timeout = (conf && conf->h3_stream_timeout) ? apr_time_from_sec(conf->h3_stream_timeout) : session->s->timeout;
     size_t offset = 0;
     while (offset < len)
     {
         apr_thread_mutex_lock(session->lock);
+        /* Reset per chunk, so this bounds time without progress rather than the
+         * total time a large response is allowed to take. */
+        apr_time_t stall_deadline = apr_time_now() + stall_timeout;
         while (stream->response_buffered >= stream->response_buffer_limit && !stream->response_cancelled && !session->aborted && !session->ngh3_dead)
         {
             apr_status_t rv = apr_thread_cond_timedwait(stream->response_cond, session->lock, apr_time_from_msec(100));
@@ -239,6 +249,13 @@ apr_status_t h3_stream_response_append(h3_stream* stream, const uint8_t* data, s
             {
                 apr_thread_mutex_unlock(session->lock);
                 return rv;
+            }
+            if (stall_timeout > 0 && apr_time_now() >= stall_deadline)
+            {
+                ap_log_error(APLOG_MARK, APLOG_INFO, 0, session->s, "HTTP/3 stream %" APR_INT64_T_FMT " made no progress for %" APR_TIME_T_FMT " seconds; abandoning the response", stream->stream_id, apr_time_sec(stall_timeout));
+                h3_stream_response_cancel_locked(stream);
+                apr_thread_mutex_unlock(session->lock);
+                return APR_TIMEUP;
             }
         }
         if (stream->response_cancelled || session->aborted || session->ngh3_dead || !session->ngh3)

@@ -52,6 +52,9 @@ struct h3_server_conf
     apr_uint32_t h3_handshake_timeout;
     apr_uint32_t h3_idle_timeout;
     apr_size_t h3_socket_buffer_size;
+    /// Seconds a response may make no progress; 0 inherits the server Timeout.
+    apr_uint32_t h3_stream_timeout;
+    apr_uint32_t h3_max_stream_errors;
     h3_tri_flag h3_session_tickets;
     h3_tri_flag h3_early_data;
 };

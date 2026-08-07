@@ -83,6 +83,11 @@ struct h3_session
     int control_streams_created;
     apr_time_t goaway_deadline;
 
+    /// Client-caused stream errors on this connection, against
+    /// H3MaxStreamErrors. A client that keeps sending malformed requests is
+    /// answered per stream, so without this it could do so indefinitely.
+    apr_uint32_t stream_errors;
+
     /// Time of the last application-level progress (stream opened, request
     /// data read, request dispatched, response data acknowledged). Drives the
     /// module's own idle enforcement: transport-level idle timeouts never

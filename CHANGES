@@ -5,6 +5,23 @@ Security-related entries always appear at the top of their release block.
 
 v0.0.60 (unreleased)
 --------------------
+  *) Added H3StreamTimeout, bounding how long a response may make no progress.
+     A client that opened a stream and then stopped reading left its worker
+     thread blocked on the response queue with nothing to release it: the
+     transport stays alive on keepalives and the idle reaper skips a session
+     that still has a task running, so a handful of such clients could occupy
+     every worker in the pool. Defaults to the server's Timeout, as
+     mod_http2's H2StreamTimeout does, and the window is measured per chunk of
+     progress so a slow but advancing transfer is unaffected.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Added H3MaxStreamErrors, closing a connection whose client has caused more
+     than that many stream errors (default 8). Answering a malformed request
+     per stream keeps the connection serving, which also let a client send
+     malformed requests indefinitely; the connection is now closed with
+     H3_EXCESSIVE_LOAD.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
   *) Applied the core LimitRequestFields and LimitRequestFieldSize limits to
      HTTP/3 requests, and advertised the resulting bound as the HTTP/3
      SETTINGS_MAX_FIELD_SECTION_SIZE. httpd enforces these while parsing an
