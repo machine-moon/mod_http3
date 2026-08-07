@@ -55,6 +55,13 @@ struct h3_server_conf
     /// Seconds a response may make no progress; 0 inherits the server Timeout.
     apr_uint32_t h3_stream_timeout;
     apr_uint32_t h3_max_stream_errors;
+    /// 0 is a meaningful capacity (no dynamic table), so track "set" separately.
+    int h3_qpack_configured;
+    apr_uint32_t h3_qpack_table_capacity;
+    apr_uint32_t h3_qpack_blocked_streams;
+    apr_uint32_t h3_min_workers;
+    apr_uint32_t h3_max_workers;
+    apr_uint32_t h3_max_worker_idle_seconds;
     h3_tri_flag h3_session_tickets;
     h3_tri_flag h3_early_data;
 };

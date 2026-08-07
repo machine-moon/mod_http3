@@ -31,6 +31,26 @@ v0.0.60 (unreleased)
      request is now answered with 431 and the connection keeps serving.
      [Alexander Gerasimov <codeguard gmail.com>]
 
+  *) Advertised a QPACK dynamic table, with H3QpackTableCapacity (default 4096)
+     and H3QpackBlockedStreams (default 16). nghttp3 defaults the decoder
+     capacity to 0, which tells a client it may not use the dynamic table at
+     all, so every request re-sent its cookies and user-agent literally -- worse
+     header compression than the same server gives over HTTP/2, whose HPACK
+     table is 4096 by default. Setting the capacity to 0 keeps the old
+     behaviour.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Added H3MinWorkers, H3MaxWorkers and H3MaxWorkerIdleSeconds. The request
+     worker pool was fixed at 16 threads growing to 64 with no way to tune it,
+     so a large machine could not use more and a small one could not use fewer.
+     The defaults are the previous fixed values, so nothing changes unless
+     configured.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Resolved mod_logio once at post_config instead of walking the loaded module
+     list, comparing names, on every connection and again on every request.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
   *) Published the mod_ssl TLS environment for HTTP/3 requests: SSL_PROTOCOL,
      SSL_CIPHER, SSL_CIPHER_USEKEYSIZE, SSL_CIPHER_ALGKEYSIZE,
      SSL_CIPHER_EXPORT and SSL_SESSION_RESUMED, under the names mod_ssl uses.

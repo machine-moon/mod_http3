@@ -34,6 +34,7 @@
 #include "h3_check.h"
 #include "h3_config.h"
 #include "h3_os.h"
+#include "h3_request.h"
 #include "mod_http3.h"
 
 apr_port_t get_server_port(const server_rec* s)
@@ -75,6 +76,12 @@ void* h3_merge_server_config(apr_pool_t* p, void* base_conf, void* new_conf)
     merged->h3_socket_buffer_size = new->h3_socket_buffer_size ? new->h3_socket_buffer_size : base->h3_socket_buffer_size;
     merged->h3_stream_timeout = new->h3_stream_timeout ? new->h3_stream_timeout : base->h3_stream_timeout;
     merged->h3_max_stream_errors = new->h3_max_stream_errors ? new->h3_max_stream_errors : base->h3_max_stream_errors;
+    merged->h3_qpack_configured = new->h3_qpack_configured ? new->h3_qpack_configured : base->h3_qpack_configured;
+    merged->h3_qpack_table_capacity = new->h3_qpack_configured ? new->h3_qpack_table_capacity : base->h3_qpack_table_capacity;
+    merged->h3_qpack_blocked_streams = new->h3_qpack_configured ? new->h3_qpack_blocked_streams : base->h3_qpack_blocked_streams;
+    merged->h3_min_workers = new->h3_min_workers ? new->h3_min_workers : base->h3_min_workers;
+    merged->h3_max_workers = new->h3_max_workers ? new->h3_max_workers : base->h3_max_workers;
+    merged->h3_max_worker_idle_seconds = new->h3_max_worker_idle_seconds ? new->h3_max_worker_idle_seconds : base->h3_max_worker_idle_seconds;
     merged->h3_session_tickets = new->h3_session_tickets != H3_FLAG_UNSET ? new->h3_session_tickets : base->h3_session_tickets;
     merged->h3_early_data = new->h3_early_data != H3_FLAG_UNSET ? new->h3_early_data : base->h3_early_data;
 
@@ -292,6 +299,138 @@ static const char* set_h3_max_stream_errors(cmd_parms* cmd, void* dummy H3_UNUSE
     return NULL;
 }
 
+static const char* set_h3_qpack_table_capacity(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
+{
+    if (!arg || !*arg)
+    {
+        return "H3QpackTableCapacity: empty value";
+    }
+    apr_uint64_t val = 0;
+    apr_status_t rv = apr_cstr_atoui64(&val, arg);
+    if (rv == APR_EINVAL)
+    {
+        return apr_psprintf(cmd->pool, "H3QpackTableCapacity: '%s' is not a number", arg);
+    }
+    if (rv == APR_ERANGE)
+    {
+        return apr_psprintf(cmd->pool, "H3QpackTableCapacity: '%s' is out of representable range", arg);
+    }
+    if (val > H3_QPACK_TABLE_CAPACITY_MAX)
+    {
+        return apr_psprintf(cmd->pool, "H3QpackTableCapacity: '%s' is out of allowed range (0-%lu)", arg, (unsigned long)H3_QPACK_TABLE_CAPACITY_MAX);
+    }
+    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
+    CHECK(conf);
+    conf->h3_qpack_table_capacity = (apr_uint32_t)val;
+    conf->h3_qpack_configured = 1;
+    return NULL;
+}
+
+static const char* set_h3_qpack_blocked_streams(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
+{
+    if (!arg || !*arg)
+    {
+        return "H3QpackBlockedStreams: empty value";
+    }
+    apr_uint64_t val = 0;
+    apr_status_t rv = apr_cstr_atoui64(&val, arg);
+    if (rv == APR_EINVAL)
+    {
+        return apr_psprintf(cmd->pool, "H3QpackBlockedStreams: '%s' is not a number", arg);
+    }
+    if (rv == APR_ERANGE)
+    {
+        return apr_psprintf(cmd->pool, "H3QpackBlockedStreams: '%s' is out of representable range", arg);
+    }
+    if (val > H3_QPACK_BLOCKED_STREAMS_MAX)
+    {
+        return apr_psprintf(cmd->pool, "H3QpackBlockedStreams: '%s' is out of allowed range (0-%lu)", arg, (unsigned long)H3_QPACK_BLOCKED_STREAMS_MAX);
+    }
+    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
+    CHECK(conf);
+    conf->h3_qpack_blocked_streams = (apr_uint32_t)val;
+    conf->h3_qpack_configured = 1;
+    return NULL;
+}
+
+static const char* set_h3_min_workers(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
+{
+    if (!arg || !*arg)
+    {
+        return "H3MinWorkers: empty value";
+    }
+    apr_uint64_t val = 0;
+    apr_status_t rv = apr_cstr_atoui64(&val, arg);
+    if (rv == APR_EINVAL)
+    {
+        return apr_psprintf(cmd->pool, "H3MinWorkers: '%s' is not a number", arg);
+    }
+    if (rv == APR_ERANGE)
+    {
+        return apr_psprintf(cmd->pool, "H3MinWorkers: '%s' is out of representable range", arg);
+    }
+    if (val == 0 || val > H3_WORKERS_MAX)
+    {
+        return apr_psprintf(cmd->pool, "H3MinWorkers: '%s' is out of allowed range (1-%lu)", arg, (unsigned long)H3_WORKERS_MAX);
+    }
+    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
+    CHECK(conf);
+    conf->h3_min_workers = (apr_uint32_t)val;
+    return NULL;
+}
+
+static const char* set_h3_max_workers(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
+{
+    if (!arg || !*arg)
+    {
+        return "H3MaxWorkers: empty value";
+    }
+    apr_uint64_t val = 0;
+    apr_status_t rv = apr_cstr_atoui64(&val, arg);
+    if (rv == APR_EINVAL)
+    {
+        return apr_psprintf(cmd->pool, "H3MaxWorkers: '%s' is not a number", arg);
+    }
+    if (rv == APR_ERANGE)
+    {
+        return apr_psprintf(cmd->pool, "H3MaxWorkers: '%s' is out of representable range", arg);
+    }
+    if (val == 0 || val > H3_WORKERS_MAX)
+    {
+        return apr_psprintf(cmd->pool, "H3MaxWorkers: '%s' is out of allowed range (1-%lu)", arg, (unsigned long)H3_WORKERS_MAX);
+    }
+    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
+    CHECK(conf);
+    conf->h3_max_workers = (apr_uint32_t)val;
+    return NULL;
+}
+
+static const char* set_h3_max_worker_idle_seconds(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
+{
+    if (!arg || !*arg)
+    {
+        return "H3MaxWorkerIdleSeconds: empty value";
+    }
+    apr_uint64_t val = 0;
+    apr_status_t rv = apr_cstr_atoui64(&val, arg);
+    if (rv == APR_EINVAL)
+    {
+        return apr_psprintf(cmd->pool, "H3MaxWorkerIdleSeconds: '%s' is not a number", arg);
+    }
+    if (rv == APR_ERANGE)
+    {
+        return apr_psprintf(cmd->pool, "H3MaxWorkerIdleSeconds: '%s' is out of representable range", arg);
+    }
+    if (val == 0 || val > H3_MAX_WORKER_IDLE_SECONDS_MAX)
+    {
+        return apr_psprintf(cmd->pool, "H3MaxWorkerIdleSeconds: '%s' is out of allowed range (1-%lu)", arg, (unsigned long)H3_MAX_WORKER_IDLE_SECONDS_MAX);
+    }
+    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
+    CHECK(conf);
+    conf->h3_max_worker_idle_seconds = (apr_uint32_t)val;
+    return NULL;
+}
+
 static const char* set_h3_max_request_body_size(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
 {
     if (!arg || !*arg)
@@ -497,6 +636,30 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
             }
             /* h3_stream_timeout is deliberately left at 0, which means "use the
              * server's Timeout" where it is read. */
+            /* 0 is a meaningful QPACK setting -- it disables the dynamic table --
+             * so these two use a separate "was it set" flag rather than 0. */
+            if (!vc->h3_qpack_configured)
+            {
+                vc->h3_qpack_table_capacity = H3_QPACK_TABLE_CAPACITY_DEFAULT;
+                vc->h3_qpack_blocked_streams = H3_QPACK_BLOCKED_STREAMS_DEFAULT;
+            }
+            if (vc->h3_min_workers == 0)
+            {
+                vc->h3_min_workers = H3_MIN_WORKERS_DEFAULT;
+            }
+            if (vc->h3_max_workers == 0)
+            {
+                vc->h3_max_workers = H3_MAX_WORKERS_DEFAULT;
+            }
+            if (vc->h3_max_workers < vc->h3_min_workers)
+            {
+                ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s, "mod_http3: H3MaxWorkers (%u) is below H3MinWorkers (%u); raising it to match", (unsigned)vc->h3_max_workers, (unsigned)vc->h3_min_workers);
+                vc->h3_max_workers = vc->h3_min_workers;
+            }
+            if (vc->h3_max_worker_idle_seconds == 0)
+            {
+                vc->h3_max_worker_idle_seconds = H3_MAX_WORKER_IDLE_SECONDS_DEFAULT;
+            }
             if (vc->h3_max_request_body_size == 0)
             {
                 vc->h3_max_request_body_size = H3_MAX_REQUEST_BODY_SIZE_DEFAULT;
@@ -563,6 +726,8 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
     }
     apr_file_close(f);
 
+    h3_request_init();
+
     ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "h3_post_config: pid=%d cert=%s key=%s h3_port=%d mpm=%s threaded=%d forked=%d max_threads=%d", h3_getpid(), conf->h3_cert_path, conf->h3_key_path, (int)conf->h3_port, ap_show_mpm(), mpm_query(AP_MPMQ_IS_THREADED), mpm_query(AP_MPMQ_IS_FORKED),
                  mpm_query(AP_MPMQ_MAX_THREADS));
     return OK;
@@ -599,5 +764,10 @@ const command_rec h3_cmds[] = {
     AP_INIT_FLAG("H3EarlyData", set_h3_early_data, NULL, RSRC_CONF, "Whether to accept 0-RTT data on resumed connections; the OpenSSL QUIC stack cannot, so this currently only warns (default: off)"),
     AP_INIT_TAKE1("H3StreamTimeout", set_h3_stream_timeout, NULL, RSRC_CONF, "Seconds a response may make no progress before the stream is aborted (default: the server Timeout)"),
     AP_INIT_TAKE1("H3MaxStreamErrors", set_h3_max_stream_errors, NULL, RSRC_CONF, "Stream errors one connection may cause before it is closed with H3_EXCESSIVE_LOAD (default: 8)"),
+    AP_INIT_TAKE1("H3QpackTableCapacity", set_h3_qpack_table_capacity, NULL, RSRC_CONF, "QPACK dynamic table capacity in bytes advertised to clients; 0 disables the dynamic table (default: 4096)"),
+    AP_INIT_TAKE1("H3QpackBlockedStreams", set_h3_qpack_blocked_streams, NULL, RSRC_CONF, "Requests that may wait on a QPACK table insert that has not arrived yet (default: 16)"),
+    AP_INIT_TAKE1("H3MinWorkers", set_h3_min_workers, NULL, RSRC_CONF, "Request worker threads kept per child process (default: 16)"),
+    AP_INIT_TAKE1("H3MaxWorkers", set_h3_max_workers, NULL, RSRC_CONF, "Maximum request worker threads per child process (default: 64)"),
+    AP_INIT_TAKE1("H3MaxWorkerIdleSeconds", set_h3_max_worker_idle_seconds, NULL, RSRC_CONF, "Seconds an idle request worker is kept before it is reaped (default: 600)"),
     AP_INIT_TAKE1(NULL, NULL, NULL, RSRC_CONF, NULL),
 };
