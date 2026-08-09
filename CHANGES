@@ -3,6 +3,14 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.52 (2026-08-08)
+--------------------
+  *) Made the socket and process calls platform-neutral behind h3_os.h.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Fixed a failed peer-address lookup leaving client_addr NULL.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.51 (2026-08-07)
 --------------------
   *) Added the ap_mpm_note_extra_connection_* optional functions to mpm_winnt.
