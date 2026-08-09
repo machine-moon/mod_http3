@@ -3,6 +3,14 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.53 (2026-08-09)
+--------------------
+  *) Reset the wakeup pair on failure, so a half-built one cannot be polled.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Backed off once the QUIC listener latched failed.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.52 (2026-08-08)
 --------------------
   *) Made the socket and process calls platform-neutral behind h3_os.h.
