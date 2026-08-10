@@ -3,6 +3,29 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.54 (2026-08-10)
+--------------------
+  *) Split each cmake/modules/<dep>.cmake into unix/ and windows/ halves.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Added MSVC flag support to the build.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Told the Windows dependency builds which configuration to install.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Skipped the examples and the test harness on Windows.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Packaged the Windows module with CPack.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Dropped the CPack source archive; the GitHub release carries its own.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Demoted the project to C17 for easier compatibility.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.53 (2026-08-09)
 --------------------
   *) Reset the wakeup pair on failure, so a half-built one cannot be polled.

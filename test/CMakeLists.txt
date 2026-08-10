@@ -1,3 +1,8 @@
+if(WIN32)
+  message(STATUS "[test] unsupported on Windows, skipping")
+  return()
+endif()
+
 # -- probe httpd build for pyhttpd config --
 find_program(APXS_EXECUTABLE NAMES apxs
   HINTS "${HTTPD_OUTPUT_DIRECTORY}/bin"

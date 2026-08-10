@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(mod_http3 VERSION 0.0.53)
+project(mod_http3 VERSION 0.0.54)
 
 # -- Compiler and Build Type Checks --
 if(NOT CMAKE_C_COMPILER_ID MATCHES "^(GNU|MSVC)$")
@@ -33,7 +33,7 @@ set(DEPENDENCIES_OUTPUT_DIRECTORY "${DEPENDENCIES_DIRECTORY}" CACHE PATH "Direct
 set(DEPENDENCIES_PARALLEL 6 CACHE STRING "Number of parallel jobs to use when building dependencies")
 
 # -- C standard --
-set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
@@ -100,7 +100,7 @@ endif()
 
 # -- Generic installation --
 install(TARGETS ${PROJECT_NAME}-lib
-  LIBRARY DESTINATION lib64/httpd/modules
+  LIBRARY DESTINATION lib64
   COMPONENT generic)
 install(FILES "${CMAKE_SOURCE_DIR}/CHANGES"
   "${CMAKE_SOURCE_DIR}/NOTICE"
