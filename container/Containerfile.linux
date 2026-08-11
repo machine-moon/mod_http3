@@ -68,9 +68,10 @@ COPY --from=builder /src/dependencies/nghttp3-dist/ /src/dependencies/nghttp3-di
 COPY --from=builder /src/dependencies/httpd-dist/  /src/dependencies/httpd-dist/
 COPY --from=builder /src/build/lib/mod_http3.so /src/dependencies/httpd-dist/modules/mod_http3.so
 
-COPY container/httpd.conf    /src/dependencies/httpd-dist/conf/httpd.conf
+COPY container/httpd-linux.conf /src/dependencies/httpd-dist/conf/httpd.conf
 COPY container/static/       /src/dependencies/httpd-dist/htdocs/
-COPY container/entrypoint.sh /entrypoint.sh
+COPY container/entrypoint-linux.sh /entrypoint.sh
+COPY scripts/mkcert.sh /mkcert.sh
 
 RUN mkdir -p /src/dependencies/httpd-dist/conf/certs && chmod +x /entrypoint.sh
 

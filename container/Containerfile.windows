@@ -1,0 +1,16 @@
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
+
+SHELL ["powershell", "-NoProfile", "-Command", "$ErrorActionPreference='Stop';"]
+
+COPY stage/ C:/httpd/
+COPY container/httpd-windows.conf C:/httpd/conf/httpd.conf
+COPY container/static/ C:/httpd/htdocs/
+COPY container/entrypoint-windows.ps1 C:/entrypoint.ps1
+COPY scripts/mkcert.ps1 C:/mkcert.ps1
+
+RUN New-Item -ItemType Directory -Force -Path C:/httpd/logs, C:/httpd/conf/certs | Out-Null
+
+EXPOSE 8443/tcp
+EXPOSE 8443/udp
+
+ENTRYPOINT ["powershell", "-NoProfile", "-File", "C:/entrypoint.ps1"]

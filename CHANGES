@@ -3,6 +3,18 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.55 (2026-08-11)
+--------------------
+  *) Added a Windows image that packages a server built on the host.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Named both platforms' container files and put both services in one compose
+     file, behind a linux and a windows profile.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Refreshed the container README for the profile-based compose file.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.54 (2026-08-10)
 --------------------
   *) Split each cmake/modules/<dep>.cmake into unix/ and windows/ halves.

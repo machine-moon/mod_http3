@@ -8,24 +8,16 @@ Commands use `podman`/`podman compose`. Substitute `docker`/`docker compose` - f
 
 ```
 container/
-  Containerfile     Multi-stage build (Debian trixie).
-                    Stage 1: builds OpenSSL, APR, httpd, mod_http3.
-                    Stage 2: slim runtime image.
-
-  compose.yml       Port mapping, volume mounts, health check.
-                    Host 8443 -> container 8443 (TCP + UDP).
-
-  entrypoint.sh     Mints a self-signed certificate if none is mounted,
-                    then execs httpd.
-
-  httpd.conf        httpd configuration. Baked into the image, and
-                    mounted over at runtime by compose.
-
-  certs/            TLS certificate and key.
-                    Generated with scripts/mkcert.sh.
-
-  static/           Document root (index.html). Baked into htdocs,
-                    and mounted over at runtime by compose.
+  Containerfile.linux      Builds OpenSSL, APR, httpd and the module on Debian trixie.
+  Containerfile.windows    Packages a host-built server tree into Server Core.
+  compose.yml              Builds and runs the Linux image (profile `linux`),
+                           or runs the published Windows image (profile `windows`).
+  entrypoint-linux.sh      Mints a certificate when none is mounted, then execs httpd.
+  entrypoint-windows.ps1   Mints a certificate, relays the logs to stdout, runs httpd.
+  httpd-linux.conf         Server configuration, baked in and mountable over.
+  httpd-windows.conf       Server configuration with Windows paths.
+  certs/                   TLS certificate and key, minted by scripts/mkcert.sh.
+  static/                  Document root, baked into htdocs and mountable over.
 ```
 
 ## Quick Start
@@ -42,9 +34,10 @@ HTTP/3 is UDP, so the mapping needs `/udp`; add `-p 8443:8443` as well for
 HTTP/1.1 and HTTP/2 on TCP. `-e H3_PORT=8888` moves the port without mounting
 anything.
 
-Tags are `:latest` from trunk, `:<commit sha>` for any trunk build, and
-`:X.Y.Z` for a release. The certificate is self-signed and regenerated on every
-start, so mount your own for anything that outlives a demo.
+Tags are `:latest` from trunk, `:<commit sha>` for any trunk build, and `:X.Y.Z`
+for a release. Each also comes as `-linux` and `-windows`; the unsuffixed tag is
+Linux. The certificate is self-signed and minted on every start, so mount your
+own for anything that outlives a demo.
 
 See [docs/containers.md](../docs/containers.md) for the full guide.
 
@@ -60,13 +53,18 @@ Build and start:
 
 ```sh
 cd container
-podman compose up -d --build
+podman compose --profile linux up -d --build
 ```
+
+Every service sits behind a profile, so a bare `compose up` starts nothing. A
+daemon serves one container OS: `--profile windows` runs the published Windows
+image rather than building one; see
+[docs/containers.md](../docs/containers.md#the-windows-image) for why.
 
 Wait for health check:
 
 ```sh
-podman compose ps
+podman compose --profile linux ps
 # STATUS: healthy (after start_period)
 ```
 
@@ -79,10 +77,10 @@ curl --http3 -k -sI https://localhost:8443/
 Stop:
 
 ```sh
-podman compose down -v
+podman compose --profile linux down -v
 ```
 
-## httpd.conf Key Directives
+## httpd-linux.conf Key Directives
 
 ```apache
 LoadModule http3_module modules/mod_http3.so
@@ -119,5 +117,5 @@ podman logs mod_http3_dev
 Force clean rebuild:
 
 ```sh
-podman compose build --no-cache
+podman compose --profile linux build --no-cache
 ```

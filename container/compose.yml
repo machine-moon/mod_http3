@@ -1,19 +1,20 @@
 services:
-  httpd:
+  httpd-linux:
+    profiles: ["linux"]
     build:
       context: ..
-      dockerfile: container/Containerfile
+      dockerfile: container/Containerfile.linux
     image: apache-http3-dev:latest
     container_name: mod_http3_dev
     ports:
       - "8443:8443/tcp"   # HTTP/1.1 and HTTP/2
       - "8443:8443/udp"   # HTTP/3
-    volumes:
-      # Optionally override the default configuration and certificates by mounting your own files.
-      #
-      # - ./httpd.conf:/src/dependencies/httpd-dist/conf/httpd.conf:ro
-      # - ./certs:/src/dependencies/httpd-dist/conf/certs:ro
-      # - ./static:/src/dependencies/httpd-dist/htdocs:ro
+    # Optionally override the configuration, certificates or document root:
+    #
+    # volumes:
+    #   - ./httpd-linux.conf:/src/dependencies/httpd-dist/conf/httpd.conf:ro
+    #   - ./certs:/src/dependencies/httpd-dist/conf/certs:z
+    #   - ./static:/src/dependencies/httpd-dist/htdocs:z
     healthcheck:
       test: ["CMD", "curl", "--http3", "-ksSf", "https://localhost:8443/"]
       interval: 120s
@@ -21,5 +22,24 @@ services:
       retries: 3
       start_period: 10s
     restart: on-failure:3
-    security_opt:
-      - label:disable
+
+  httpd-windows:
+    profiles: ["windows"]
+    image: ghcr.io/machine-moon/mod_http3:latest-windows
+    container_name: mod_http3_dev
+    ports:
+      - "8443:8443/tcp"   # HTTP/1.1 and HTTP/2
+      - "8443:8443/udp"   # HTTP/3
+    # Optionally override the configuration, certificates or document root:
+    #
+    # volumes:
+    #   - ./httpd-windows.conf:C:/httpd/conf/httpd.conf
+    #   - ./certs:C:/httpd/conf/certs
+    #   - ./static:C:/httpd/htdocs
+    healthcheck:
+      test: ["CMD", "curl.exe", "-ksSf", "https://localhost:8443/"]
+      interval: 120s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: on-failure:3
