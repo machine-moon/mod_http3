@@ -23,7 +23,7 @@ CERTS="container/certs"
 cp build/lib/mod_http3.so "$HTTPD_MODULE"
 
 mkdir -p "$HTTPD_PATH/conf"
-sed "s|/src/dependencies/httpd-dist|$HTTPD_PATH|g" container/httpd.conf > "$HTTPD_CONF"
+sed "s|/src/dependencies/httpd-dist|$HTTPD_PATH|g" container/httpd-linux.conf > "$HTTPD_CONF"
 
 if [ ! -f "$CERTS/server.crt" ] || [ ! -f "$CERTS/server.key" ]; then
     scripts/mkcert.sh "$CERTS"
@@ -36,9 +36,11 @@ mkdir -p "$HTTPD_HTDOCS"
 rm -rf "$HTTPD_HTDOCS"/*
 cp -a container/static/. "$HTTPD_HTDOCS/"
 
+H3_PORT="${H3_PORT:-8443}"
+
 echo "Launch GDB with:"
-echo "  gdb --args $HTTPD_PATH/bin/httpd -X -f $HTTPD_CONF"
+echo "  H3_PORT=$H3_PORT gdb --args $HTTPD_PATH/bin/httpd -X -f $HTTPD_CONF"
 echo ""
 echo "Or run directly:"
-echo "  $HTTPD_PATH/bin/httpd -X -f $HTTPD_CONF"
+echo "  H3_PORT=$H3_PORT $HTTPD_PATH/bin/httpd -X -f $HTTPD_CONF"
 echo ""

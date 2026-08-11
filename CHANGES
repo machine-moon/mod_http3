@@ -3,6 +3,17 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.57 (2026-08-11)
+--------------------
+  *) Documented the Windows build, the platform naming and the H3_PORT hint.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Documented what the build needs: MSVC, Ninja, perl, nasm and vcpkg.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Documented why the Windows image is built on the host, not in itself.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.56 (2026-08-11)
 --------------------
   *) Built and published a Windows image beside the Linux one.

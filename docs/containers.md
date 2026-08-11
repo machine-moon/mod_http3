@@ -86,12 +86,12 @@ podman run --rm -e H3_PORT=8888 -p 8888:8888/udp ghcr.io/machine-moon/mod_http3:
 
 ## Change the configuration
 
-The baked configuration is [`container/httpd.conf`](https://github.com/machine-moon/mod_http3/blob/trunk/container/httpd.conf).
+The baked configuration is [`container/httpd-linux.conf`](https://github.com/machine-moon/mod_http3/blob/trunk/container/httpd-linux.conf).
 Copy it, edit it, mount it back:
 
 ```sh
 podman run --rm -p 8443:8443/udp \
-    -v ./httpd.conf:/src/dependencies/httpd-dist/conf/httpd.conf:ro \
+    -v ./httpd-linux.conf:/src/dependencies/httpd-dist/conf/httpd.conf:ro \
     ghcr.io/machine-moon/mod_http3:latest
 ```
 
@@ -111,11 +111,14 @@ over the baked ones:
 ```sh
 bash scripts/mkcert.sh container/certs
 cd container
-podman compose up -d --build
-podman compose ps          # wait for "healthy"
-podman compose logs -f
-podman compose down -v
+podman compose --profile linux up -d --build
+podman compose --profile linux ps          # wait for "healthy"
+podman compose --profile linux logs -f
+podman compose --profile linux down -v
 ```
+
+Both services sit behind a profile — `linux` builds from your checkout,
+`windows` pulls the published image — so a bare `compose up` starts nothing.
 
 A cold build takes about ten minutes — OpenSSL, APR, APR-util, nghttp3 and httpd
 are all compiled from source.
@@ -127,11 +130,34 @@ are all compiled from source.
 | `:latest` | The most recent build of `trunk` |
 | `:X.Y.Z` | A release, retagged from the exact image that release was tested with |
 | `:<commit sha>` | Any single trunk build, for pinning or bisecting |
+| `:<tag>-linux`, `:<tag>-windows` | The same image for one platform; unsuffixed is Linux |
 
 Pin a version for anything reproducible:
 
 ```sh
 podman pull ghcr.io/machine-moon/mod_http3:0.0.54
+```
+
+## The Windows image
+
+No Windows base image carries MSVC, and installing it per build costs more than
+the build itself, so the Windows image is not self-building like the Linux one.
+CI compiles the server on a `windows-latest` runner, stages it into `stage/`,
+and `Containerfile.windows` copies that tree in.
+
+Building it yourself therefore means building the server first:
+
+```pwsh
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
+
+then staging `dependencies/httpd-dist`, the module and its DLLs into `stage/`
+as the `windows` job does. Pulling `:latest-windows` is usually the better
+option; the `windows` profile in `container/compose.yml` runs it:
+
+```pwsh
+docker compose -f container/compose.yml --profile windows up -d
 ```
 
 ## The interop endpoint

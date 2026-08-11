@@ -59,8 +59,9 @@ graph TD
    Candidate tags carry an `-rcN` suffix, so they are tagged by hand; `scripts/release.sh` builds the artifacts locally so you can inspect them. It also creates the bare `vX.Y.Z` tag from `CMakeLists.txt` — leave it, push only the `-rcN` tag, and step 5 will offer to move it onto the approved commit. Pushing the tag is what starts the workflow, and the workflow is the only thing that publishes a release — it re-checks the tag against `CMakeLists.txt`.
 
    The release carries these assets, each with a `.sha256` beside it:
-   - `mod_http3-X.Y.Z.tar.gz` / `mod_http3-X.Y.Z.zip` — source snapshots (the authoritative release artifacts)
-   - `mod_http3-X.Y.Z-linux-<arch>.tar.gz` / `mod_http3-X.Y.Z-linux-<arch>.zip` — generic Linux binaries
+   - `mod_http3-X.Y.Z.tar.gz` — source snapshot (the authoritative release artifact)
+   - `mod_http3-X.Y.Z-linux-<arch>.tar.gz` — generic Linux binaries
+   - `mod_http3-X.Y.Z-windows-<arch>.tar.gz` — generic Windows binaries
    - `mod_http3-X.Y.Z.<arch>.rpm` — RHEL/Fedora layout
    - `mod_http3_X.Y.Z_<arch>.deb` — Debian/Ubuntu layout
 

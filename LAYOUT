@@ -1,5 +1,5 @@
 The mod_http3 Source Tree LAYOUT
-Last updated: 2026-07-13
+Last updated: 2026-08-09
 ---------------------------------
 
 ./ ........................ Top-Level mod_http3 Root Directory
@@ -30,7 +30,11 @@ mod_http3/ ................ Core Module Source Code
 
 cmake/ .................... CMake Build System
 
-  modules/ .................. Dependency discovery and build modules
+  modules/ .................. Dependency dispatchers, per platform
+
+    unix/ ..................... Autotools builds
+
+    windows/ .................. MSVC builds
 
   packaging/ ................ CPack packaging configuration
 
@@ -53,6 +57,10 @@ docs/ ..................... Documentation
 
 examples/ ................. Example Programs
 
-scripts/ .................. Helper Scripts
+scripts/ .................. Developer Helper Scripts
+
+.github/ .................. CI/CD
+
+  workflows/ ................ GitHub Actions workflows
 
 container/ ................ Container Support

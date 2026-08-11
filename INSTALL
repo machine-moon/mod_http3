@@ -41,6 +41,19 @@
      APU      >= 1.6.0
      nghttp3  >= 1.18.0
 
+  APR-util needs expat and httpd needs PCRE2. Neither is a submodule:
+  both belong to the server stack rather than to mod_http3, and both are
+  located with find_package, so install them from the platform:
+
+     Debian, Ubuntu   apt install libexpat1-dev libpcre2-dev
+     Fedora, RHEL     dnf install expat-devel pcre2-devel
+     Windows          vcpkg install expat:x64-windows pcre2:x64-windows
+
+  Windows builds with MSVC, which is what APR, APR-util and httpd write
+  their Windows CMake builds for; there is no cross-compiler path from
+  Linux. Configure with vcpkg's toolchain file so the sub-builds resolve
+  the packages above.
+
   NOTE: Distro-packaged httpd (Ubuntu, Fedora, etc.) ships with an
   older MMN and will be rejected. Use the default source build or
   provide a custom prefix install via WITH_HTTPD instead.
@@ -57,10 +70,13 @@
 
    The packages are written to build/dist/:
 
-      mod_http3-X.Y.Z-linux-<arch>.tar.gz
-      mod_http3-X.Y.Z-linux-<arch>.zip
-      mod_http3-X.Y.Z.<arch>.rpm
-      mod_http3_X.Y.Z_<arch>.deb
+      mod_http3-X.Y.Z-linux-<arch>.tar.gz     generic Linux
+      mod_http3-X.Y.Z-windows-<arch>.tar.gz   generic Windows
+      mod_http3-X.Y.Z.<arch>.rpm              RHEL, Fedora
+      mod_http3_X.Y.Z_<arch>.deb              Debian, Ubuntu
+      mod_http3-X.Y.Z.tar.gz                  source
+
+   The archives are tarballs on both platforms; rpm and deb are Linux only.
 
    Verify a downloaded or locally built artifact with its matching checksum:
 
