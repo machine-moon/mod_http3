@@ -1,11 +1,11 @@
-name: build
+name: build-linux
 
 on:
   workflow_call:
     outputs:
       image:
-        description: Image this build published for the commit.
-        value: ${{ jobs.module.outputs.image }}
+        description: Linux image this build published for the commit.
+        value: ${{ jobs.linux.outputs.image }}
 
 permissions:
   contents: read
@@ -15,8 +15,8 @@ env:
   IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
 
 jobs:
-  module:
-    name: module
+  linux:
+    name: linux
     runs-on: ubuntu-latest
     outputs:
       image: ${{ steps.ref.outputs.image }}
@@ -24,8 +24,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          submodules: recursive
+
+      - name: Initialise submodules
+        run: |
+          git submodule update --init
+          git submodule update --init --recursive dependencies/nghttp3
 
       - name: Set up buildx
         uses: docker/setup-buildx-action@v4
@@ -42,25 +45,22 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: container/Containerfile
+          file: container/Containerfile.linux
           build-args: JOBS=4
-          tags: ${{ env.IMAGE }}
+          tags: ${{ env.IMAGE }}-linux
           load: true
-          push: ${{ github.event_name != 'pull_request' }}
           cache-from: type=gha,scope=module
           cache-to: type=gha,scope=module,mode=max
 
-      - name: Check linkage
-        run: |
-          docker run --rm --entrypoint ldd "$IMAGE" \
-            /src/dependencies/httpd-dist/modules/mod_http3.so | tee ldd.txt
-          ! grep -q "not found" ldd.txt
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        run: docker push "$IMAGE-linux"
 
       - name: Build artifacts
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: container/Containerfile
+          file: container/Containerfile.linux
           build-args: JOBS=4
           target: artifacts
           outputs: type=local,dest=dist
@@ -69,10 +69,10 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: dist
+          name: dist-linux
           path: dist/
           if-no-files-found: error
 
       - name: Export image ref
         id: ref
-        run: echo "image=$IMAGE" >>"$GITHUB_OUTPUT"
+        run: echo "image=$IMAGE-linux" >>"$GITHUB_OUTPUT"

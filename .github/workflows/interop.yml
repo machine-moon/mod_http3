@@ -3,8 +3,8 @@ name: interop
 on:
   workflow_call:
     inputs:
-      module-image:
-        description: Image the module was built into, reused for the endpoint.
+      linux-image:
+        description: Linux image the build stage published, reused for the endpoint.
         required: true
         type: string
 
@@ -44,7 +44,7 @@ jobs:
         with:
           context: .
           file: interop/Containerfile
-          build-args: MODULE_IMAGE=${{ inputs.module-image }}
+          build-args: MODULE_IMAGE=${{ inputs.linux-image }}
           tags: ${{ env.IMAGE }}
           load: true
           cache-from: type=gha,scope=interop
@@ -61,7 +61,7 @@ jobs:
         with:
           context: .
           file: interop/Containerfile
-          build-args: MODULE_IMAGE=${{ inputs.module-image }}
+          build-args: MODULE_IMAGE=${{ inputs.linux-image }}
           tags: ${{ env.IMAGE }}
           push: true
           cache-from: type=gha,scope=interop

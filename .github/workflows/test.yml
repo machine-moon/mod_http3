@@ -27,7 +27,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: .
-          file: container/Containerfile
+          file: container/Containerfile.linux
           build-args: JOBS=4
           target: tester
           tags: ${{ env.IMAGE }}

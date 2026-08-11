@@ -1,0 +1,138 @@
+name: build-windows
+
+on:
+  workflow_call:
+    outputs:
+      image:
+        description: Windows image this build published for the commit.
+        value: ${{ jobs.windows.outputs.image }}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+jobs:
+  windows:
+    name: windows
+    runs-on: windows-latest
+    outputs:
+      image: ${{ steps.ref.outputs.image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Initialise submodules
+        run: |
+          git submodule update --init
+          git submodule update --init --recursive dependencies/nghttp3
+
+      - name: Set up NASM
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = '2.16.03'
+          $sha256 = '3EE4782247BCB874378D02F7EAB4E294A84D3D15F3F6EE2DE2F47A46AA7226E6'
+          Invoke-WebRequest "https://www.nasm.us/pub/nasm/releasebuilds/$version/win64/nasm-$version-win64.zip" -OutFile nasm.zip
+          $hash = (Get-FileHash nasm.zip -Algorithm SHA256).Hash
+          if ($hash -ne $sha256) { throw "nasm checksum mismatch: $hash" }
+          Expand-Archive nasm.zip -DestinationPath C:\nasm -Force
+          "C:\nasm\nasm-$version" | Out-File -Append -Encoding ascii $env:GITHUB_PATH
+
+      - name: Set up MSVC
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'no Visual Studio with the C++ toolset' }
+          $keep = 'PATH', 'INCLUDE', 'LIB', 'LIBPATH', 'UCRTVersion',
+                  'VCINSTALLDIR', 'VCToolsInstallDir', 'VCToolsRedistDir',
+                  'VSINSTALLDIR', 'WindowsSdkDir', 'WindowsSDKVersion'
+          cmd /c "call ""$vs\VC\Auxiliary\Build\vcvars64.bat"" >nul && set" |
+            Where-Object { $keep -contains ($_ -split '=', 2)[0] } |
+            Out-File -Append -Encoding ascii $env:GITHUB_ENV
+
+      - name: Install the server stack's own dependencies
+        run: vcpkg install expat:x64-windows pcre2:x64-windows
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_C_COMPILER=cl
+          "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_MODULE=ON
+          -DBUILD_EXAMPLES=OFF
+          -DBUILD_TESTS=OFF
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Stage the server
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          Copy-Item -Recurse -Force dependencies/httpd-dist stage
+          New-Item -ItemType Directory -Force -Path stage/modules, stage/conf/certs | Out-Null
+          Copy-Item -Force build/lib/mod_http3.so stage/modules/mod_http3.so
+
+          $redist = (Get-ChildItem "$env:VCToolsRedistDir/x64" -Filter Microsoft.VC*.CRT -Directory)[0]
+          @(
+            "dependencies/apr-dist/bin"
+            "dependencies/nghttp3-dist/bin"
+            "dependencies/openssl-dist/bin"
+            "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
+            $redist.FullName
+          ) | ForEach-Object { Get-ChildItem $_ -Filter *.dll | Copy-Item -Destination stage/bin -Force }
+
+          $required = 'libapr-1.dll', 'libaprutil-1.dll', 'nghttp3.dll',
+                      'libssl-3-x64.dll', 'libcrypto-3-x64.dll', 'VCRUNTIME140.dll'
+          foreach ($dll in $required) {
+            if (-not (Test-Path "stage/bin/$dll")) { throw "staging is missing $dll" }
+          }
+
+          Copy-Item -Force dependencies/openssl-dist/bin/openssl.exe stage/bin/openssl.exe
+
+      - name: Check the staged server runs
+        run: ./stage/bin/httpd.exe -v
+
+      - name: Log in to ghcr
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Build image
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path ctx | Out-Null
+          Copy-Item -Recurse -Force stage ctx/stage
+          Copy-Item -Recurse -Force container ctx/container
+          Copy-Item -Recurse -Force scripts ctx/scripts
+          docker build -f ctx/container/Containerfile.windows -t "${env:IMAGE}-windows" ctx
+
+      - name: Push image
+        if: github.event_name != 'pull_request'
+        run: docker push "${env:IMAGE}-windows"
+
+      - name: Build artifacts
+        run: cmake --build build --target release
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-windows
+          path: build/dist/*-windows-*
+          if-no-files-found: error
+
+      - name: Export image ref
+        id: ref
+        shell: bash
+        run: echo "image=$IMAGE-windows" >>"$GITHUB_OUTPUT"

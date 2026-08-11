@@ -29,41 +29,48 @@ jobs:
           version=${GITHUB_REF_NAME#v}
           grep -q "^project(mod_http3 VERSION ${version%%-rc*})$" CMakeLists.txt
 
-  build:
-    name: build
-    uses: ./.github/workflows/build.yml
+  build-linux:
+    name: build-linux
+    uses: ./.github/workflows/build-linux.yml
+    permissions:
+      contents: read
+      packages: write
+
+  build-windows:
+    name: build-windows
+    uses: ./.github/workflows/build-windows.yml
     permissions:
       contents: read
       packages: write
 
   test:
     name: test
-    needs: build
+    needs: build-linux
     uses: ./.github/workflows/test.yml
     permissions:
       contents: read
 
   interop:
     name: interop
-    needs: build
+    needs: build-linux
     if: github.event_name != 'pull_request'
     uses: ./.github/workflows/interop.yml
     with:
-      module-image: ${{ needs.build.outputs.image }}
+      linux-image: ${{ needs.build-linux.outputs.image }}
     permissions:
       contents: read
       packages: write
 
   pages:
     name: pages
-    needs: build
+    needs: build-linux
     uses: ./.github/workflows/pages.yml
     permissions:
       contents: read
 
   release:
     name: release
-    needs: [version, build, test, interop, pages]
+    needs: [version, build-linux, build-windows, test, interop, pages]
     if: github.ref_type == 'tag'
     uses: ./.github/workflows/release.yml
     permissions:

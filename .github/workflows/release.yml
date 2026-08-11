@@ -38,7 +38,16 @@ jobs:
           TAGS: ${{ steps.meta.outputs.tags }}
         run: |
           while read -r tag; do
-            docker buildx imagetools create -t "$tag" "${tag%:*}:$GITHUB_SHA"
+            [ -n "$tag" ] || continue
+            case "$tag" in
+              *-interop:*)
+                docker buildx imagetools create -t "$tag" "${tag%:*}:$GITHUB_SHA"
+                continue ;;
+            esac
+            for os in linux windows; do
+              docker buildx imagetools create -t "$tag-$os" "${tag%:*}:$GITHUB_SHA-$os"
+            done
+            docker buildx imagetools create -t "$tag" "${tag%:*}:$GITHUB_SHA-linux"
           done <<<"$TAGS"
 
   pages:
@@ -72,10 +81,16 @@ jobs:
         id: version
         run: echo "value=${GITHUB_REF_NAME#v}" >>"$GITHUB_OUTPUT"
 
-      - name: Download artifacts
+      - name: Download linux artifacts
         uses: actions/download-artifact@v8
         with:
-          name: dist
+          name: dist-linux
+          path: dist
+
+      - name: Download windows artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-windows
           path: dist
 
       - name: Publish release
