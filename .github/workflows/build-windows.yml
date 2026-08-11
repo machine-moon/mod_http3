@@ -109,6 +109,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
+      - name: Ensure docker is running
+        shell: pwsh
+        run: |
+          try { Start-Service docker } catch { Write-Host "Start-Service docker: $_" }
+          for ($i = 0; $i -lt 30; $i++) {
+            docker info 2>$null | Out-Null
+            if ($LASTEXITCODE -eq 0) { exit 0 }
+            Start-Sleep 2
+          }
+          throw 'docker daemon did not come up'
+
       - name: Build image
         shell: pwsh
         run: |

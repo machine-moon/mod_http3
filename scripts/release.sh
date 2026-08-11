@@ -72,7 +72,7 @@ cmake --build build-release --target release -- -j"$(nproc)"
 
 rm -rf build-release/dist/_CPack_Packages
 
-git tag "${force[@]}" -a "v$version" -m "mod_http3 $version"
+git tag "${force[@]}" -s "v$version" -m "mod_http3 $version"
 
 echo ""
 echo "mod_http3 $version"
