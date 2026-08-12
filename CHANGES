@@ -3,6 +3,12 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.59 (2026-08-12)
+--------------------
+  *) Disabled vcpkg applocal deployment in the Windows sub-builds; parallel
+     module links raced each other copying the same DLL.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.58 (2026-08-11)
 --------------------
   *) Signed the release tag instead of leaving it unsigned.

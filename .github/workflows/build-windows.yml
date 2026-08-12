@@ -65,6 +65,7 @@ jobs:
           -DCMAKE_C_COMPILER=cl
           "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           -DVCPKG_TARGET_TRIPLET=x64-windows
+          -DVCPKG_APPLOCAL_DEPS=OFF
           -DCMAKE_BUILD_TYPE=Release
           -DBUILD_MODULE=ON
           -DBUILD_EXAMPLES=OFF
