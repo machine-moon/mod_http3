@@ -5,6 +5,13 @@ Security-related entries always appear at the top of their release block.
 
 v0.0.60 (unreleased)
 --------------------
+  *) Added H3SocketBufferSize, which asks for the QUIC socket send and receive
+     buffer size. A receive buffer left at the OS default overflows once a
+     single connection runs at speed, and each dropped datagram costs a
+     retransmit; the OS still caps what it grants, and a capped grant is
+     logged rather than fatal.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
   *) Rejected malformed HTTP/3 requests (missing or duplicate pseudo-header
      fields, connection-specific fields, content-length mismatch) with a
      stream error of type H3_MESSAGE_ERROR per RFC 9114 4.1.2. Previously

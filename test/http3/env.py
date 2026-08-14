@@ -88,6 +88,7 @@ class H3Conf(HttpdConf):
         h3_handshake_timeout=None,
         h3_idle_timeout=None,
         h3_address_validation=None,
+        h3_socket_buffer_size=None,
         extra_lines=None
     ):
         self.start_vhost(
@@ -124,6 +125,8 @@ class H3Conf(HttpdConf):
         if h3_address_validation is not None:
             val = "on" if h3_address_validation is True else ("off" if h3_address_validation is False else h3_address_validation)
             self.add(f"H3AddressValidation {val}")
+        if h3_socket_buffer_size is not None:
+            self.add(f"H3SocketBufferSize {h3_socket_buffer_size}")
 
         self.add("Protocols h3 http/1.1")
         for line in extra_lines or []:

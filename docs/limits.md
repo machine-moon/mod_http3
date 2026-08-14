@@ -7,6 +7,7 @@ HTTP/3 request and response bodies are buffered by the module. Set limits accord
 | `H3MaxConnections` | `256` | Refuses new QUIC connections after the per-child limit |
 | `H3MaxConcurrentStreams` | `100` | Caps in-flight requests per connection |
 | `H3StreamBufferSize` | `65536` | Sets per-stream read/write buffer capacity |
+| `H3SocketBufferSize` | `2097152` | Requests QUIC socket send/receive buffer size, capped by the OS |
 | `H3MaxRequestBodySize` | `10485760` | Rejects request bodies above 10 MiB |
 | `H3MaxResponseBodySize` | unlimited | Replaces excessive buffered responses with HTTP 500 when set |
 | `H3HandshakeTimeout` | `10` seconds | Terminates incomplete QUIC/TLS handshakes |
