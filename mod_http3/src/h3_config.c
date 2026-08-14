@@ -73,6 +73,8 @@ void* h3_merge_server_config(apr_pool_t* p, void* base_conf, void* new_conf)
     merged->h3_handshake_timeout = new->h3_handshake_timeout ? new->h3_handshake_timeout : base->h3_handshake_timeout;
     merged->h3_idle_timeout = new->h3_idle_timeout ? new->h3_idle_timeout : base->h3_idle_timeout;
     merged->h3_socket_buffer_size = new->h3_socket_buffer_size ? new->h3_socket_buffer_size : base->h3_socket_buffer_size;
+    merged->h3_session_tickets = new->h3_session_tickets != H3_FLAG_UNSET ? new->h3_session_tickets : base->h3_session_tickets;
+    merged->h3_early_data = new->h3_early_data != H3_FLAG_UNSET ? new->h3_early_data : base->h3_early_data;
 
     return merged;
 }
@@ -340,6 +342,22 @@ static const char* set_h3_idle_timeout(cmd_parms* cmd, void* dummy H3_UNUSED, co
     return NULL;
 }
 
+static const char* set_h3_session_tickets(cmd_parms* cmd, void* dummy H3_UNUSED, int flag)
+{
+    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
+    CHECK(conf);
+    conf->h3_session_tickets = flag ? H3_FLAG_ON : H3_FLAG_OFF;
+    return NULL;
+}
+
+static const char* set_h3_early_data(cmd_parms* cmd, void* dummy H3_UNUSED, int flag)
+{
+    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
+    CHECK(conf);
+    conf->h3_early_data = flag ? H3_FLAG_ON : H3_FLAG_OFF;
+    return NULL;
+}
+
 static const char* set_h3_alt_svc(cmd_parms* cmd, void* dummy H3_UNUSED, int flag)
 {
     h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
@@ -435,6 +453,14 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
             {
                 vc->h3_address_validation = H3_FLAG_ON;
             }
+            if (vc->h3_session_tickets == H3_FLAG_UNSET)
+            {
+                vc->h3_session_tickets = H3_FLAG_ON;
+            }
+            if (vc->h3_early_data == H3_FLAG_UNSET)
+            {
+                vc->h3_early_data = H3_FLAG_OFF;
+            }
             if (vc->h3_alt_svc_max_age == 0)
             {
                 vc->h3_alt_svc_max_age = H3_ALT_SVC_MAX_AGE_DEFAULT;
@@ -453,6 +479,12 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
     }
 
     CHECK(conf && conf->h3_cert_path && conf->h3_key_path, return HTTP_INTERNAL_SERVER_ERROR;);
+
+    /* Say so rather than let an operator believe 0-RTT is running. */
+    if (conf->h3_early_data == H3_FLAG_ON)
+    {
+        ap_log_error(APLOG_MARK, APLOG_WARNING, 0, s, "mod_http3: H3EarlyData is on but the OpenSSL QUIC stack does not accept 0-RTT data on the server side; connections will keep completing the handshake before any request is read");
+    }
 
     /* Validate cert and key files are readable */
     apr_file_t* f = NULL;
@@ -503,5 +535,7 @@ const command_rec h3_cmds[] = {
     AP_INIT_TAKE1("H3MaxResponseBodySize", set_h3_max_response_body_size, NULL, RSRC_CONF, "Maximum HTTP/3 response body size in bytes; an explicit limit enables bounded whole-response buffering (default: unlimited streaming)"),
     AP_INIT_FLAG("H3AddressValidation", set_h3_address_validation, NULL, RSRC_CONF, "Whether to validate client addresses with a QUIC Retry packet before accepting a connection (default: on)"),
     AP_INIT_TAKE1("H3SocketBufferSize", set_h3_socket_buffer_size, NULL, RSRC_CONF, "Bytes requested for the QUIC socket send and receive buffers; the OS may grant less (default: 2097152)"),
+    AP_INIT_FLAG("H3SessionTickets", set_h3_session_tickets, NULL, RSRC_CONF, "Whether to issue TLS session tickets so returning clients can resume instead of running a full handshake (default: on)"),
+    AP_INIT_FLAG("H3EarlyData", set_h3_early_data, NULL, RSRC_CONF, "Whether to accept 0-RTT data on resumed connections; the OpenSSL QUIC stack cannot, so this currently only warns (default: off)"),
     AP_INIT_TAKE1(NULL, NULL, NULL, RSRC_CONF, NULL),
 };

@@ -37,6 +37,21 @@ typedef struct h3q_config
     const char* cert_path;
     const char* key_path;
     unsigned address_validation : 1;
+    /*
+     * Issue TLS 1.3 session tickets, so a returning client can resume instead
+     * of running a full handshake with another certificate verification. Each
+     * worker process keeps its own ticket keys, so a client resumes only when
+     * it returns to the process that issued the ticket; otherwise the server
+     * falls back to a full handshake.
+     */
+    unsigned session_tickets : 1;
+    /*
+     * Ask to accept 0-RTT data on resumed connections. OpenSSL's QUIC stack
+     * does not accept early data on the server side, so this currently only
+     * primes the SSL_CTX; h3_post_config warns when it is set. Kept so an
+     * OpenSSL that gains server-side 0-RTT needs no further plumbing here.
+     */
+    unsigned early_data : 1;
 } h3q_config;
 
 /**
