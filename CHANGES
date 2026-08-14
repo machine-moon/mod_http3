@@ -5,6 +5,15 @@ Security-related entries always appear at the top of their release block.
 
 v0.0.60 (unreleased)
 --------------------
+  *) Published the mod_ssl TLS environment for HTTP/3 requests: SSL_PROTOCOL,
+     SSL_CIPHER, SSL_CIPHER_USEKEYSIZE, SSL_CIPHER_ALGKEYSIZE,
+     SSL_CIPHER_EXPORT and SSL_SESSION_RESUMED, under the names mod_ssl uses.
+     mod_ssl does not manage these connections, so scripts and rewrite
+     conditions that read them saw nothing but HTTPS=on over HTTP/3. The values
+     are read through the new h3q_conn_tls_info() and formatted once per
+     connection, not per request.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
   *) Added H3SessionTickets, which controls whether TLS 1.3 session tickets are
      issued so a returning client can resume instead of running a full
      handshake. Tickets stay on by default, as before, and each worker process

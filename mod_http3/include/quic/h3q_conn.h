@@ -25,6 +25,31 @@
 #include "quic/h3q.h"
 
 /**
+ * Negotiated TLS parameters of one connection, as a caller needs them to
+ * describe the connection to an application (mod_ssl's SSL_PROTOCOL,
+ * SSL_CIPHER and friends). The strings point into storage OpenSSL owns and
+ * stay valid as long as the connection does; callers copy what they keep
+ * longer.
+ */
+typedef struct h3q_tls_info
+{
+    const char* protocol;
+    const char* cipher;
+    /* Key bits actually used, and the algorithm's full strength. */
+    int cipher_bits;
+    int cipher_alg_bits;
+    unsigned resumed : 1;
+} h3q_tls_info;
+
+/**
+ * Read the negotiated TLS parameters of a connection.
+ * @param conn Connection to query; NULL reports failure.
+ * @param out  Filled in on success; untouched otherwise.
+ * @return 1 when @p out was filled, 0 when the cipher is not yet known.
+ */
+int h3q_conn_tls_info(h3q_conn* conn, h3q_tls_info* out);
+
+/**
  * Apply the stream modes, incoming-stream policy and idle timeout a freshly
  * accepted connection needs before its handshake is driven.
  * @param conn              Connection to prepare; NULL reports failure.

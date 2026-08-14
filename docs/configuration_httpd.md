@@ -199,7 +199,23 @@ The module uses the **first VirtualHost** that has both `H3CertificatePath` and 
 </VirtualHost>
 ```
 
-### Alt-Svc Header
+### TLS Environment Variables
+
+mod_ssl does not manage HTTP/3 connections, so it publishes no TLS environment for them. The module supplies the following under the same names mod_ssl uses, so existing CGI scripts, `mod_rewrite` conditions and log formats keep working over HTTP/3:
+
+| Variable | Example | Notes |
+| --- | --- | --- |
+| `HTTPS` | `on` | Always set for HTTP/3 requests |
+| `SSL_PROTOCOL` | `TLSv1.3` | QUIC requires TLS 1.3, so this is always `TLSv1.3` |
+| `SSL_CIPHER` | `TLS_AES_128_GCM_SHA256` | Negotiated cipher suite |
+| `SSL_CIPHER_USEKEYSIZE` | `128` | Key bits actually used |
+| `SSL_CIPHER_ALGKEYSIZE` | `128` | The algorithm's full strength |
+| `SSL_CIPHER_EXPORT` | `false` | Always `false`; TLS 1.3 has no export ciphers |
+| `SSL_SESSION_RESUMED` | `Initial` | `Resumed` when the client presented a session ticket |
+
+These are set for every HTTP/3 request, without needing `SSLOptions +StdEnvVars`, and are computed once per connection. Certificate-derived variables (`SSL_SERVER_*`, `SSL_CLIENT_*`) and `SSL_SESSION_ID` are not published; HTTP/3 requests do not use client certificates in this module.
+
+## Alt-Svc Header
 
 mod_http3 injects the `Alt-Svc` response header automatically when HTTP/3 is configured (controlled by [`H3AltSvc`](#h3altsvc), on by default):
 
