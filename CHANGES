@@ -3,7 +3,7 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
-v0.0.60 (unreleased)
+v0.0.60 (2026-08-14)
 --------------------
   *) Added H3StreamTimeout, bounding how long a response may make no progress.
      A client that opened a stream and then stopped reading left its worker

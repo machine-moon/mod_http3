@@ -40,7 +40,7 @@ typedef struct h3_response_chunk h3_response_chunk;
  * mod_ssl uses so existing scripts and rewrite conditions keep working.
  * Computed once per connection, since none of it changes between requests, and
  * held in the session pool so every request on the connection can point at it.
- * All members are NULL when the engine runs no TLS of its own.
+ * All members are NULL when the cipher was not yet negotiated.
  */
 typedef struct h3_tls_env
 {
