@@ -3,6 +3,16 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.60 (2026-08-15)
+--------------------
+  *) Allow in-flight streams to finish and drain HTTP/3 connections when
+     the MPM is gracefully shutting down.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
+  *) Updated the httpd submodule so that a child stopping gracefully waits
+     no longer than max(Timeout, GracefulShutdownTimeout) for connections.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.59 (2026-08-12)
 --------------------
   *) Disabled vcpkg applocal deployment in the Windows sub-builds; parallel
@@ -14,7 +24,7 @@ v0.0.58 (2026-08-11)
   *) Signed the release tag instead of leaving it unsigned.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
-  *) Improved CI/CD. 
+  *) Improved CI/CD.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
 v0.0.57 (2026-08-11)
@@ -311,7 +321,7 @@ v0.0.29 (2026-07-06)
 
 v0.0.28 (2026-07-05)
 --------------------
-  *) Added browser support! Updated debugger.sh and added browser.sh. 
+  *) Added browser support! Updated debugger.sh and added browser.sh.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
   *) Moved threads (worker and event loop) to a h3_threads to declutter h3_io.
@@ -351,7 +361,7 @@ v0.0.25 (2026-07-02)
      finish before tearing down shared states.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
-  *) Notify the MPM about connections so it keeps children alive 
+  *) Notify the MPM about connections so it keeps children alive
      while QUIC traffic is still active.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
@@ -385,7 +395,7 @@ v0.0.22 (2026-06-29)
   *) Added H3MaxConcurrentStreams and H3StreamBufferSize directives.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
-  *) Made some minor improvement to configuration mangement 
+  *) Made some minor improvement to configuration mangement
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
 v0.0.21 (2026-06-27)
@@ -535,11 +545,11 @@ v0.0.10 (2026-06-04)
 
   *) Updated INSTALL and README documentation to cover deployment
      steps, build requirements, and curl3 integration notes.
-     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>] 
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
 v0.0.9 (2026-06-03)
 --------------------
-  *) Replaced VENDOR_SYSTEM with BUILD_SSL/BUILD_HTTPD and added 
+  *) Replaced VENDOR_SYSTEM with BUILD_SSL/BUILD_HTTPD and added
      WITH_SSL/WITH_HTTPD variables for more dependency control.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
@@ -604,10 +614,10 @@ v0.0.2 (2026-04-03)
      for Linux x86_64, Linux aarch64, and Windows x86_64 via MinGW
      toolchains (experimental).
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
-  
+
   *) Refactored Makefile and configuration.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
-  
+
   *) Integrated VS Code tasks and debugger configuration.
      [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
