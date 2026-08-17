@@ -81,6 +81,7 @@ struct h3_session
     size_t stream_drain_cursor;
 
     int control_streams_created;
+    int goaway_sent;
     apr_time_t goaway_deadline;
 
     /// Client-caused stream errors on this connection, against
