@@ -1,16 +1,14 @@
-# -- Apache httpd (trunk MMN 20211221+ preferred; 2.4.52+ via compat layer) --
+# -- Apache httpd 2.4.69+ (stable) or 2.5.1+ (devel) --
 
 if(TARGET httpd)
   return()
 endif()
 
-# 2.4.52 is the floor: ap_create_request (2.4.49), the child_stopping hook
-# (2.4.49) and ap_thread_current (2.4.52) must exist. Against a 2.4.x server
-# mod_http3 uses its response compat path (see mod_http3/include/h3_compat.h).
-# The MMN floor stays on the 2.4.x major (20120211); trunk reports 20211221 and
-# compares greater, so both satisfy it.
-set(HTTPD_VERSION_MIN "2.4.52")
-set(HTTPD_MMN_MIN "20120211")
+set(HTTPD_STABLE_VERSION_MIN "2.4.69")
+set(HTTPD_STABLE_MMN_MIN "20120211")
+
+set(HTTPD_DEVEL_VERSION_MIN "2.5.1")
+set(HTTPD_DEVEL_MMN_MIN "20211221")
 
 if(WIN32)
   include(windows/httpd)

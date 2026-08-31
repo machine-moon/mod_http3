@@ -138,6 +138,28 @@ endif()
 
 # -- Extract httpd information --
 
+# module magic number
+execute_process(
+  COMMAND "${APXS_EXECUTABLE}" -q HTTPD_MMN
+  OUTPUT_VARIABLE HTTPD_MMN
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE HTTPD_MMN_RESULT
+)
+if(NOT HTTPD_MMN_RESULT EQUAL 0 OR NOT HTTPD_MMN)
+  message(FATAL_ERROR
+    "[httpd] error: apxs did not report a valid HTTPD_MMN\n"
+    "  apxs       = ${APXS_EXECUTABLE}\n"
+    "  result     = ${HTTPD_MMN_RESULT}")
+elseif(HTTPD_MMN EQUAL HTTPD_STABLE_MMN_MIN)
+  set(H3_DEVEL 0)
+  set(HTTPD_VERSION_MIN ${HTTPD_STABLE_VERSION_MIN})
+elseif(HTTPD_MMN EQUAL HTTPD_DEVEL_MMN_MIN)
+  set(H3_DEVEL 1)
+  set(HTTPD_VERSION_MIN ${HTTPD_DEVEL_VERSION_MIN})
+else()
+  message(FATAL_ERROR "[httpd] error: Unsupported Apache MMN: ${HTTPD_MMN}")
+endif()
+
 # version
 execute_process(
   COMMAND "${APXS_EXECUTABLE}" -q HTTPD_VERSION
@@ -145,7 +167,7 @@ execute_process(
   OUTPUT_STRIP_TRAILING_WHITESPACE
   RESULT_VARIABLE HTTPD_VERSION_RESULT
 )
-if(NOT HTTPD_VERSION_RESULT EQUAL 0 OR NOT HTTPD_VERSION OR HTTPD_VERSION VERSION_LESS HTTPD_VERSION_MIN)
+if(NOT HTTPD_VERSION_RESULT EQUAL 0 OR NOT HTTPD_VERSION OR HTTPD_VERSION VERSION_LESS "${HTTPD_VERSION_MIN}")
   message(FATAL_ERROR
     "[httpd] error: apxs did not report a valid HTTPD_VERSION (need at least ${HTTPD_VERSION_MIN})\n"
     "  apxs          = ${APXS_EXECUTABLE}\n"
@@ -168,28 +190,13 @@ if(NOT HTTPD_INCLUDE_RESULT EQUAL 0 OR NOT EXISTS "${HTTPD_INCLUDE_DIR}/httpd.h"
     "  result     = ${HTTPD_INCLUDE_RESULT}")
 endif()
 
-# module magic number
-execute_process(
-  COMMAND "${APXS_EXECUTABLE}" -q HTTPD_MMN
-  OUTPUT_VARIABLE HTTPD_MMN
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  RESULT_VARIABLE HTTPD_MMN_RESULT
-)
-if(NOT HTTPD_MMN_RESULT EQUAL 0 OR NOT HTTPD_MMN)
-  message(FATAL_ERROR
-    "[httpd] error: apxs did not report a valid HTTPD_MMN (need at least ${HTTPD_MMN_MIN})\n"
-    "  apxs       = ${APXS_EXECUTABLE}\n"
-    "  HTTPD_MMN  = ${HTTPD_MMN}\n"
-    "  result     = ${HTTPD_MMN_RESULT}")
+if(H3_DEVEL)
+  set(_HTTPD_VERSION_DISPLAY "${HTTPD_VERSION}-dev")
+else()
+  set(_HTTPD_VERSION_DISPLAY "${HTTPD_VERSION}")
 endif()
 
-if(HTTPD_MMN LESS HTTPD_MMN_MIN)
-  message(WARNING
-    "[httpd] warning: apxs reported HTTPD_MMN=${HTTPD_MMN} which is less than required minimum ${HTTPD_MMN_MIN}\n"
-    "  Some features may be unavailable.")
-endif()
-
-message(STATUS "[httpd] found (${HTTPD_VERSION}): ${HTTPD_OUTPUT_DIRECTORY}")
+message(STATUS "[httpd] found (${_HTTPD_VERSION_DISPLAY}): ${HTTPD_OUTPUT_DIRECTORY}")
 
 add_library(httpd INTERFACE)
 target_link_libraries(httpd INTERFACE apr apu)

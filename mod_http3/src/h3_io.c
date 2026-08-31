@@ -98,6 +98,16 @@ static void teardown(h3_io_t* io)
     /* Both wakeup sockets belong to the child pool and close with it. */
 }
 
+static apr_status_t listen_stop_cleanup(void* data)
+{
+    h3_io_t* io = data;
+    if (io && io->draining)
+    {
+        h3_io_listen_stop(io);
+    }
+    return APR_SUCCESS;
+}
+
 apr_status_t h3_io_listen_start(apr_pool_t* pchild, server_rec* s, h3_server_conf* conf, int udp_fd)
 {
     CHECK(pchild);
@@ -160,7 +170,9 @@ apr_status_t h3_io_listen_start(apr_pool_t* pchild, server_rec* s, h3_server_con
         child_h3_io = NULL;
         return APR_EGENERAL;
     }
-    ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "mod_http3 loaded with version: %d (%s) on pid=%d port=%d", MOD_HTTP3_VERSION, MOD_HTTP3_VERSION_STRING, h3_getpid(), (int)conf->h3_port);
+    apr_pool_pre_cleanup_register(pchild, io, listen_stop_cleanup);
+    ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "mod_http3 loaded with version: %d (%s) on pid=%d port=%d; built against httpd %d.%d.%d MMN %d:%d (%s)", MOD_HTTP3_VERSION, MOD_HTTP3_VERSION_STRING, h3_getpid(), (int)conf->h3_port, AP_SERVER_MAJORVERSION_NUMBER, AP_SERVER_MINORVERSION_NUMBER,
+                 AP_SERVER_PATCHLEVEL_NUMBER, MODULE_MAGIC_NUMBER_MAJOR, MODULE_MAGIC_NUMBER_MINOR, H3_DEVEL ? "devel" : "stable");
     return APR_SUCCESS;
 }
 
@@ -169,9 +181,7 @@ void h3_io_listen_drain(h3_io_t* io)
     if (io && !io->draining)
     {
         io->draining = 1;
-        ap_log_error(APLOG_MARK, APLOG_INFO, 0, io->server,
-                     "graceful stop: draining %d connection(s), the MPM waits for them to finish",
-                     io->active_sessions ? io->active_sessions->nelts : 0);
+        ap_log_error(APLOG_MARK, APLOG_INFO, 0, io->server, "graceful stop: draining %d connection(s), the MPM waits for them to finish", io->active_sessions ? io->active_sessions->nelts : 0);
         h3_wakeup_signal(&io->wakeup);
     }
 }

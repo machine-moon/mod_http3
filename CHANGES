@@ -3,7 +3,7 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
-v0.0.61 (2026-08-14)
+v0.0.62 (2026-08-31)
 --------------------
   *) Added H3StreamTimeout, bounding how long a response may make no progress.
      A client that opened a stream and then stopped reading left its worker
@@ -100,6 +100,16 @@ v0.0.61 (2026-08-14)
      connections to drain. The patch in .patches/httpd-2.4.66-pr699.patch
      adds the notifications to httpd 2.4.x.
      [Alexander Gerasimov <codeguard gmail.com>]
+
+v0.0.61 (2026-08-18)
+--------------------
+  *) Build against httpd 2.4.x as well as trunk; response buckets and the
+     child_stopped hook are now selected at compile time.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Detect the stable or devel httpd at configure time and backport the
+     graceful drain to the 2.4.x branch.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
 
 v0.0.60 (2026-08-15)
 --------------------

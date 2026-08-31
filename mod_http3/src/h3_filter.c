@@ -24,8 +24,10 @@
 #include <http_log.h>
 #include <http_protocol.h>
 #include <http_request.h>
+#include <util_time.h>
 
 #include <apr_buckets.h>
+#include <apr_lib.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
@@ -177,6 +179,168 @@ static apr_status_t capture_body_bucket(request_rec* r, h3_conn_ctx_t* ctx, apr_
     ctx->dataheaplen = new_len;
     return APR_SUCCESS;
 }
+
+#if H3_STABLE
+
+static int uniq_field_values(void* d, const char* key H3_UNUSED, const char* val)
+{
+    apr_array_header_t* values = d;
+    char* start;
+    char* e = apr_pstrdup(values->pool, val);
+
+    do
+    {
+        while (*e == ',' || apr_isspace(*e))
+        {
+            ++e;
+        }
+        if (*e == '\0')
+        {
+            break;
+        }
+        start = e;
+        while (*e != '\0' && *e != ',' && !apr_isspace(*e))
+        {
+            ++e;
+        }
+        if (*e != '\0')
+        {
+            *e++ = '\0';
+        }
+
+        int i;
+        char** strpp;
+        for (i = 0, strpp = (char**)values->elts; i < values->nelts; ++i, ++strpp)
+        {
+            if (*strpp && ap_cstr_casecmp(*strpp, start) == 0)
+            {
+                break;
+            }
+        }
+        if (i == values->nelts)
+        {
+            *(char**)apr_array_push(values) = start;
+        }
+    } while (*e != '\0');
+
+    return 1;
+}
+
+static void fix_vary(request_rec* r)
+{
+    apr_array_header_t* varies = apr_array_make(r->pool, 5, sizeof(char*));
+    apr_table_do(uniq_field_values, varies, r->headers_out, "Vary", NULL);
+    if (varies->nelts > 0)
+    {
+        apr_table_setn(r->headers_out, "Vary", apr_array_pstrcat(r->pool, varies, ','));
+    }
+}
+
+void h3_response_finalize(request_rec* r, h3_conn_ctx_t* h3ctx)
+{
+    CHECK(r);
+    CHECK(h3ctx);
+    if (h3ctx->resp_headers)
+    {
+        return;
+    }
+
+    if (!apr_is_empty_table(r->err_headers_out))
+    {
+        r->headers_out = apr_table_overlay(r->pool, r->err_headers_out, r->headers_out);
+        apr_table_clear(r->err_headers_out);
+    }
+
+    if (apr_table_get(r->subprocess_env, "force-no-vary") != NULL)
+    {
+        apr_table_unset(r->headers_out, "Vary");
+    }
+    else
+    {
+        fix_vary(r);
+    }
+
+    if (apr_table_get(r->notes, "no-etag") != NULL)
+    {
+        apr_table_unset(r->headers_out, "ETag");
+    }
+
+    if (AP_STATUS_IS_HEADER_ONLY(r->status))
+    {
+        apr_table_unset(r->headers_out, "Transfer-Encoding");
+        apr_table_unset(r->headers_out, "Content-Length");
+        r->content_type = r->content_encoding = NULL;
+        r->content_languages = NULL;
+        r->clength = r->chunked = 0;
+    }
+
+    const char* ctype = ap_make_content_type(r, r->content_type);
+    if (ctype)
+    {
+        apr_table_setn(r->headers_out, "Content-Type", ctype);
+    }
+
+    if (r->content_encoding)
+    {
+        apr_table_setn(r->headers_out, "Content-Encoding", r->content_encoding);
+    }
+
+    if (!apr_is_empty_array(r->content_languages))
+    {
+        const char* field = apr_table_get(r->headers_out, "Content-Language");
+        char* token;
+        while (field && (token = ap_get_list_item(r->pool, &field)) != NULL)
+        {
+            int i;
+            char** languages = (char**)r->content_languages->elts;
+            for (i = 0; i < r->content_languages->nelts; ++i)
+            {
+                if (!ap_cstr_casecmp(token, languages[i]))
+                {
+                    break;
+                }
+            }
+            if (i == r->content_languages->nelts)
+            {
+                *((char**)apr_array_push(r->content_languages)) = token;
+            }
+        }
+        apr_table_setn(r->headers_out, "Content-Language", apr_array_pstrcat(r->pool, r->content_languages, ','));
+    }
+
+    if (r->no_cache && !apr_table_get(r->headers_out, "Expires"))
+    {
+        char* date = apr_palloc(r->pool, APR_RFC822_DATE_LEN);
+        ap_recent_rfc822_date(date, r->request_time);
+        apr_table_add(r->headers_out, "Expires", date);
+    }
+
+    const char* clheader = apr_table_get(r->headers_out, "Content-Length");
+    if (r->header_only && clheader && !strcmp(clheader, "0"))
+    {
+        apr_table_unset(r->headers_out, "Content-Length");
+    }
+
+    if (r->proxyreq == PROXYREQ_NONE || !apr_table_get(r->headers_out, "Date"))
+    {
+        char* date = apr_palloc(r->pool, APR_RFC822_DATE_LEN);
+        ap_recent_rfc822_date(date, r->request_time);
+        apr_table_setn(r->headers_out, "Date", date);
+    }
+    if (r->proxyreq == PROXYREQ_NONE || !apr_table_get(r->headers_out, "Server"))
+    {
+        const char* us = ap_get_server_banner();
+        if (us && *us)
+        {
+            apr_table_setn(r->headers_out, "Server", us);
+        }
+    }
+
+    h3ctx->resp_status = r->status;
+    h3ctx->resp_headers = r->headers_out;
+}
+
+#endif /* H3_STABLE */
 
 apr_status_t h3_filter_out_proto(ap_filter_t* f, apr_bucket_brigade* bb)
 {

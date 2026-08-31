@@ -103,17 +103,37 @@ file(READ "${HTTPD_INCLUDE_DIR}/ap_mmn.h" _ap_mmn_h)
 string(REGEX MATCH "#define MODULE_MAGIC_NUMBER_MAJOR[ \t]+([0-9]+)" _ "${_ap_mmn_h}")
 set(HTTPD_MMN "${CMAKE_MATCH_1}")
 
-if(NOT HTTPD_MMN OR HTTPD_MMN LESS HTTPD_MMN_MIN)
-  message(WARNING
-    "[httpd] warning: MODULE_MAGIC_NUMBER_MAJOR=${HTTPD_MMN} is less than the required minimum ${HTTPD_MMN_MIN}\n"
-    "  Some features may be unavailable.")
+if(NOT HTTPD_MMN)
+  message(FATAL_ERROR
+    "[httpd] error: could not read MODULE_MAGIC_NUMBER_MAJOR\n"
+    "  ap_mmn.h = ${HTTPD_INCLUDE_DIR}/ap_mmn.h")
+elseif(HTTPD_MMN EQUAL HTTPD_STABLE_MMN_MIN)
+  set(H3_DEVEL 0)
+  set(HTTPD_VERSION_MIN ${HTTPD_STABLE_VERSION_MIN})
+elseif(HTTPD_MMN EQUAL HTTPD_DEVEL_MMN_MIN)
+  set(H3_DEVEL 1)
+  set(HTTPD_VERSION_MIN ${HTTPD_DEVEL_VERSION_MIN})
+else()
+  message(FATAL_ERROR "[httpd] error: Unsupported Apache MMN: ${HTTPD_MMN}")
+endif()
+
+if(HTTPD_VERSION VERSION_LESS "${HTTPD_VERSION_MIN}")
+  message(FATAL_ERROR
+    "[httpd] error: httpd ${HTTPD_VERSION} is older than the required minimum ${HTTPD_VERSION_MIN}\n"
+    "  headers = ${HTTPD_INCLUDE_DIR}")
 endif()
 
 # A DLL resolves every symbol at link time, so ap_* cannot be left to the loader.
 find_library(HTTPD_LIBRARY NAMES libhttpd
   PATHS "${HTTPD_OUTPUT_DIRECTORY}/lib" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH REQUIRED NO_CACHE)
 
-message(STATUS "[httpd] found (${HTTPD_VERSION}): ${HTTPD_OUTPUT_DIRECTORY}")
+if(H3_DEVEL)
+  set(_HTTPD_VERSION_DISPLAY "${HTTPD_VERSION}-dev")
+else()
+  set(_HTTPD_VERSION_DISPLAY "${HTTPD_VERSION}")
+endif()
+
+message(STATUS "[httpd] found (${_HTTPD_VERSION_DISPLAY}): ${HTTPD_OUTPUT_DIRECTORY}")
 
 add_library(httpd INTERFACE)
 target_link_libraries(httpd INTERFACE "${HTTPD_LIBRARY}" apr apu)
