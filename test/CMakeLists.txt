@@ -56,6 +56,7 @@ if(NOT CURL_BIN)
   message(WARNING "[test] curl not found - pytest clients will use 'curl' from PATH at runtime")
   set(CURL_BIN "curl")
 else()
+  get_filename_component(CURL_BIN "${CURL_BIN}" REALPATH)
   execute_process(COMMAND "${CURL_BIN}" -V
     OUTPUT_VARIABLE _CURL_RESULT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
   if(NOT _CURL_RESULT MATCHES "HTTP3")
