@@ -3,6 +3,12 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.63 (2026-08-29)
+--------------------
+  *) Enforced H3IdleTimeout in the module event loop, so a connection with no
+     requests is closed instead of being held open by QUIC keepalive pings.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.62 (2026-08-29)
 --------------------
   *) Rejected a malformed HTTP/3 request with a stream error instead of
