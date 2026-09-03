@@ -3,6 +3,12 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.65 (2026-08-29)
+--------------------
+  *) Added H3SessionTickets, so an operator can control whether returning
+     clients resume instead of running a full handshake.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.64 (2026-08-29)
 --------------------
   *) Added H3SocketBufferSize, so the QUIC socket no longer drops datagrams

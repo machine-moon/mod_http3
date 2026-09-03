@@ -125,6 +125,14 @@ The timeout duration in seconds for QUIC handshakes to complete. If a connection
 
 The idle timeout duration in seconds for QUIC connections. This maps to the standard QUIC `max_idle_timeout` transport parameter. A connection will be closed if no traffic is sent or received within this timeframe. Use a higher value for applications that require long-lived idle connections (e.g., long-polling, WebSockets over HTTP/3).
 
+### H3SessionTickets
+
+**Syntax:** `H3SessionTickets on|off`
+**Context:** server config, virtual host
+**Default:** `on`
+
+Whether to issue TLS 1.3 session tickets. A returning client that presents a ticket resumes its session and skips a certificate verification, which is the difference between a two-round-trip and a one-round-trip reconnect. Each worker process holds its own ticket keys, so a client resumes only when it returns to the process that issued its ticket; otherwise the server transparently falls back to a full handshake. Turn this off to force a full handshake on every connection.
+
 ### H3AddressValidation
 
 **Syntax:** `H3AddressValidation on|off`
