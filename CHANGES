@@ -3,6 +3,12 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.66 (2026-08-29)
+--------------------
+  *) Published the mod_ssl TLS environment (SSL_PROTOCOL, SSL_CIPHER and
+     friends) for HTTP/3 requests, which mod_ssl does not manage.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.65 (2026-08-29)
 --------------------
   *) Added H3SessionTickets, so an operator can control whether returning
