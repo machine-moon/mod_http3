@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.26)
 
-project(mod_http3 VERSION 0.0.68)
+project(mod_http3 VERSION 0.0.69)
 
 # -- Compiler and Build Type Checks --
 if(NOT CMAKE_C_COMPILER_ID MATCHES "^(GNU|MSVC)$")

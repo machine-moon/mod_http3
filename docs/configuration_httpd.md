@@ -172,6 +172,48 @@ The deadline is evaluated on the QUIC event thread, which already holds the conn
 
 How many client-caused stream errors one connection may produce before it is closed with `H3_EXCESSIVE_LOAD`. A malformed request is answered as a stream error so the connection keeps serving its other streams (RFC 9114 section 4.1.2), which on its own would let a client send malformed requests indefinitely at no cost. Equivalent to mod_http2's `H2MaxStreamErrors`.
 
+### H3QpackTableCapacity
+
+**Syntax:** `H3QpackTableCapacity bytes`
+**Context:** server config, virtual host
+**Default:** `4096`
+
+Bytes of QPACK dynamic table the server allows a client to use when encoding request header fields, advertised as `SETTINGS_QPACK_MAX_TABLE_CAPACITY`. With `0` the client may not use the dynamic table at all and must send every field literally, so repeated requests re-send their cookies and `User-Agent` in full. A larger table trades memory per connection for smaller requests.
+
+### H3QpackBlockedStreams
+
+**Syntax:** `H3QpackBlockedStreams n`
+**Context:** server config, virtual host
+**Default:** `0`
+
+How many requests may wait on a QPACK dynamic table insert that has not arrived yet, advertised as `SETTINGS_QPACK_BLOCKED_STREAMS`. `0`, the default, forbids blocking; a client may still use the dynamic table, but only for entries the server has already acknowledged. Only meaningful when [`H3QpackTableCapacity`](#h3qpacktablecapacity) is non-zero.
+
+Raise this only for a trusted client population. While a stream is blocked, nghttp3 buffers everything the client sends on it without bound, and neither [`H3MaxRequestBodySize`](#h3maxrequestbodysize) nor any other request limit applies to those bytes, so each permitted blocked stream is memory a client can grow at will.
+
+### H3MinWorkers
+
+**Syntax:** `H3MinWorkers n`
+**Context:** server config, virtual host
+**Default:** `16`
+
+Request worker threads started per child process. HTTP/3 requests are dispatched to this pool rather than handled on the QUIC event thread.
+
+### H3MaxWorkers
+
+**Syntax:** `H3MaxWorkers n`
+**Context:** server config, virtual host
+**Default:** `64`
+
+Maximum request worker threads per child process. This caps how many HTTP/3 requests one child can process at once, independently of the MPM's own thread settings. A value below [`H3MinWorkers`](#h3minworkers) is raised to match it, with a warning.
+
+### H3MaxWorkerIdleSeconds
+
+**Syntax:** `H3MaxWorkerIdleSeconds seconds`
+**Context:** server config, virtual host
+**Default:** `600`
+
+How long an idle request worker is kept before it exits, letting the pool shrink back towards [`H3MinWorkers`](#h3minworkers) after a burst. Equivalent to mod_http2's `H2MaxWorkerIdleSeconds`.
+
 ## VirtualHost Configuration
 
 ### Port Detection

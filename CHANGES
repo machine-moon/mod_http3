@@ -3,6 +3,16 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.69 (2026-08-29)
+--------------------
+  *) Advertised a QPACK dynamic table, sized by H3QpackTableCapacity and
+     H3QpackBlockedStreams, so request headers compress as they do over HTTP/2.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Made the request worker pool tunable with H3MinWorkers, H3MaxWorkers and
+     H3MaxWorkerIdleSeconds instead of a fixed 16 to 64 threads.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.68 (2026-08-29)
 --------------------
   *) Added H3StreamTimeout, so a client that stops reading can no longer park

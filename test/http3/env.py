@@ -92,6 +92,11 @@ class H3Conf(HttpdConf):
         h3_session_tickets=None,
         h3_stream_timeout=None,
         h3_max_stream_errors=None,
+        h3_qpack_table_capacity=None,
+        h3_qpack_blocked_streams=None,
+        h3_min_workers=None,
+        h3_max_workers=None,
+        h3_max_worker_idle_seconds=None,
         extra_lines=None
     ):
         self.start_vhost(
@@ -137,6 +142,16 @@ class H3Conf(HttpdConf):
             self.add(f"H3StreamTimeout {h3_stream_timeout}")
         if h3_max_stream_errors is not None:
             self.add(f"H3MaxStreamErrors {h3_max_stream_errors}")
+        if h3_qpack_table_capacity is not None:
+            self.add(f"H3QpackTableCapacity {h3_qpack_table_capacity}")
+        if h3_qpack_blocked_streams is not None:
+            self.add(f"H3QpackBlockedStreams {h3_qpack_blocked_streams}")
+        if h3_min_workers is not None:
+            self.add(f"H3MinWorkers {h3_min_workers}")
+        if h3_max_workers is not None:
+            self.add(f"H3MaxWorkers {h3_max_workers}")
+        if h3_max_worker_idle_seconds is not None:
+            self.add(f"H3MaxWorkerIdleSeconds {h3_max_worker_idle_seconds}")
 
         self.add("Protocols h3 http/1.1")
         for line in extra_lines or []:

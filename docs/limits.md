@@ -14,6 +14,7 @@ HTTP/3 request and response bodies are buffered by the module. Set limits accord
 | `H3IdleTimeout` | `300` seconds | Closes idle QUIC connections |
 | `H3StreamTimeout` | the server `Timeout` | Abandons a response that makes no progress |
 | `H3MaxStreamErrors` | `8` | Closes a connection whose client keeps causing stream errors |
+| `H3MaxWorkers` | `64` | Caps concurrent HTTP/3 requests per child process |
 
 ## Response Body Limit
 
