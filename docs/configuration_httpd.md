@@ -154,6 +154,24 @@ it a location first:
 </Location>
 ```
 
+### H3StreamTimeout
+
+**Syntax:** `H3StreamTimeout seconds`
+**Context:** server config, virtual host
+**Default:** the server's `Timeout`
+
+How long a response may make no progress before it is abandoned. A client that opens a stream and then stops reading otherwise leaves the request worker blocked on the per-stream response queue indefinitely: the QUIC connection stays alive on keepalives and the idle enforcement in [`H3IdleTimeout`](#h3idletimeout) deliberately skips a connection that still has a request running. The window is measured per chunk of progress, not over the whole response, so a slow but advancing transfer is never cut off. Equivalent to mod_http2's `H2StreamTimeout`.
+
+The deadline is evaluated on the QUIC event thread, which already holds the connection lock, so a blocked worker does not have to win that lock to be released. Note that a client which keeps making a little progress resets the window on every chunk, so this bounds a stalled transfer rather than a slow one.
+
+### H3MaxStreamErrors
+
+**Syntax:** `H3MaxStreamErrors n`
+**Context:** server config, virtual host
+**Default:** `8`
+
+How many client-caused stream errors one connection may produce before it is closed with `H3_EXCESSIVE_LOAD`. A malformed request is answered as a stream error so the connection keeps serving its other streams (RFC 9114 section 4.1.2), which on its own would let a client send malformed requests indefinitely at no cost. Equivalent to mod_http2's `H2MaxStreamErrors`.
+
 ## VirtualHost Configuration
 
 ### Port Detection

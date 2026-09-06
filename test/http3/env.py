@@ -90,6 +90,8 @@ class H3Conf(HttpdConf):
         h3_address_validation=None,
         h3_socket_buffer_size=None,
         h3_session_tickets=None,
+        h3_stream_timeout=None,
+        h3_max_stream_errors=None,
         extra_lines=None
     ):
         self.start_vhost(
@@ -131,6 +133,10 @@ class H3Conf(HttpdConf):
         if h3_session_tickets is not None:
             val = "on" if h3_session_tickets is True else ("off" if h3_session_tickets is False else h3_session_tickets)
             self.add(f"H3SessionTickets {val}")
+        if h3_stream_timeout is not None:
+            self.add(f"H3StreamTimeout {h3_stream_timeout}")
+        if h3_max_stream_errors is not None:
+            self.add(f"H3MaxStreamErrors {h3_max_stream_errors}")
 
         self.add("Protocols h3 http/1.1")
         for line in extra_lines or []:

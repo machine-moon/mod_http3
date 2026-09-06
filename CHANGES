@@ -3,6 +3,16 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.68 (2026-08-29)
+--------------------
+  *) Added H3StreamTimeout, so a client that stops reading can no longer park
+     a request worker until it goes away.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Added H3MaxStreamErrors, closing a connection whose client keeps sending
+     malformed requests instead of answering them forever.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.67 (2026-08-29)
 --------------------
   *) SECURITY: Applied LimitRequestFields and LimitRequestFieldSize to HTTP/3,
