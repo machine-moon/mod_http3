@@ -3,6 +3,12 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.70 (2026-09-06)
+--------------------
+  *) SECURITY: Updated the httpd submodule so mpm_event tolerates a connection
+     it never accepted, ending a child crash on an ErrorDocument over HTTP/3.
+     [Tarek Ibrahim <tareki pulsarxtech.com> <t1br4h1m gmail.com>]
+
 v0.0.69 (2026-08-29)
 --------------------
   *) Advertised a QPACK dynamic table, sized by H3QpackTableCapacity and
