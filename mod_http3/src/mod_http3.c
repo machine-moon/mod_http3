@@ -76,5 +76,5 @@ HTTP3_PUBLIC module http3_module = {
     h3_merge_server_config,  /* merge per-server config structures */
     h3_cmds,                 /* command apr_table_t */
     register_hooks,          /* register hooks */
-    AP_MODULE_FLAG_NONE      /* flags */
+    AP_MODULE_FLAG_ALWAYS_MERGE /* every vhost gets its own config, H3 directives or not */
 };

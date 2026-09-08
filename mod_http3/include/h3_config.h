@@ -127,8 +127,9 @@ int h3_ssl_add_cert_files(server_rec* s, apr_pool_t* p, apr_array_header_t* cert
 
 /**
  * ap_post_config hook: fill in defaults on every vhost that serves HTTP/3;
- * the first one owns the listener. No-op in AP_SQ_MS_CREATE_PRE_CONFIG.
- * @param p     Config pool (unused).
+ * the first one owns the listener, and an SNI callback swaps in each other
+ * host's certificate by name. No-op in AP_SQ_MS_CREATE_PRE_CONFIG.
+ * @param p     Config pool; owns the SNI host table.
  * @param plog  Log pool (unused).
  * @param ptemp Temp pool (unused).
  * @param s     The first server_rec in the configuration.

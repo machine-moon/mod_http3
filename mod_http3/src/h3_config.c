@@ -590,8 +590,36 @@ int h3_ssl_add_cert_files(server_rec* s, apr_pool_t* p, apr_array_header_t* cert
     return DECLINED;
 }
 
-int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool_t* ptemp, server_rec* s)
+/** One HTTP/3 host name and the TLS context that carries its certificate. */
+typedef struct
 {
+    const char* name;
+    SSL_CTX* ctx;
+} h3_sni_host;
+
+/// cert_cb: serve each host its own certificate over one listener, selected by SNI.
+/// SSL_set_SSL_CTX does not switch the certificate of a QUIC connection; applying
+/// the matched host's certificate, key and chain to the connection does.
+static int h3_sni_select_cert(SSL* ssl, void* arg)
+{
+    const apr_array_header_t* hosts = arg;
+    const char* sni = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+    for (int i = 0; sni && i < hosts->nelts; i++)
+    {
+        const h3_sni_host* h = &APR_ARRAY_IDX(hosts, i, h3_sni_host);
+        if (apr_cstr_casecmp(h->name, sni) == 0)
+        {
+            STACK_OF(X509)* chain = NULL;
+            SSL_CTX_get0_chain_certs(h->ctx, &chain);
+            return SSL_use_certificate(ssl, SSL_CTX_get0_certificate(h->ctx)) == 1 && SSL_use_PrivateKey(ssl, SSL_CTX_get0_privatekey(h->ctx)) == 1 && (!chain || SSL_set1_chain(ssl, chain) == 1);
+        }
+    }
+    return 1; /* no match: the listener's own certificate */
+}
+
+int h3_post_config(apr_pool_t* p, apr_pool_t* plog H3_UNUSED, apr_pool_t* ptemp, server_rec* s)
+{
+    CHECK(p);
     CHECK(ptemp);
     CHECK(s);
     h3_server_conf* conf = NULL;
@@ -601,11 +629,27 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
         return OK;
     }
 
+    /* Names of every HTTP/3 host, so the listener can pick a certificate by SNI. */
+    apr_array_header_t* sni = apr_array_make(p, 4, sizeof(h3_sni_host));
+
     for (server_rec* vs = s; vs; vs = vs->next)
     {
         h3_server_conf* vc = ap_get_module_config(vs->module_config, &http3_module);
         if (vc->ssl_ctx)
         {
+            if (vs->server_hostname)
+            {
+                h3_sni_host* e = apr_array_push(sni);
+                e->name = vs->server_hostname;
+                e->ctx = vc->ssl_ctx;
+            }
+            /* ServerAlias exact names; wildcards are not matched (ponytail: exact only). */
+            for (int i = 0; vs->names && i < vs->names->nelts; i++)
+            {
+                h3_sni_host* e = apr_array_push(sni);
+                e->name = APR_ARRAY_IDX(vs->names, i, const char*);
+                e->ctx = vc->ssl_ctx;
+            }
             vc->host_port = get_server_port(vs);
             if (vc->h3_port == 0)
             {
@@ -701,6 +745,9 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
         ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: no host serves HTTP/3: add h3 to Protocols on a host with SSLEngine on");
         return HTTP_INTERNAL_SERVER_ERROR;
     }
+
+    /* The listener serves conf's certificate by default and swaps by SNI. */
+    SSL_CTX_set_cert_cb(conf->ssl_ctx, h3_sni_select_cert, sni);
 
     h3_request_init();
     return OK;

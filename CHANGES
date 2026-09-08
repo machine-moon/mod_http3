@@ -16,6 +16,22 @@ v0.0.71 (2026-09-08)
      removed; drop them from existing configurations.
      [Alexander Gerasimov <codeguard gmail.com>]
 
+  *) Select the HTTP/3 certificate by SNI, so each virtual host on a shared
+     port serves its own certificate instead of the first host's.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Give every virtual host its own mod_http3 configuration
+     (AP_MODULE_FLAG_ALWAYS_MERGE). A host without H3 directives used to share
+     the main server's, so per-host settings such as H3AltSvc and H3AltSvcMaxAge
+     were silently ignored and hosts could not carry their own certificate.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Test suite: stop.conf now names the same pid file as httpd.conf, so
+     "apachectl -k stop" actually stops the server on httpd builds whose
+     default pid file lives in run/; before, every restart in the suite kept
+     talking to the previous server.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.70 (2026-09-06)
 --------------------
   *) SECURITY: Updated the httpd submodule so mpm_event tolerates a connection
