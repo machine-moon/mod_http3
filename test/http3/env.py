@@ -77,8 +77,6 @@ class H3Conf(HttpdConf):
         proxy_self=False,
         h2proxy_self=False,
         h3_port=True,
-        h3_cert_path=None,
-        h3_key_path=None,
         h3_max_concurrent_streams=None,
         h3_stream_buffer_size=None,
         h3_max_request_body_size=None,
@@ -107,11 +105,6 @@ class H3Conf(HttpdConf):
         if h3_port:
             port = h3_port if not isinstance(h3_port, bool) else self.env.https_port
             self.add(f"H3Port {port}")
-        
-        cert = h3_cert_path if h3_cert_path else self.env.test_cert_file
-        key = h3_key_path if h3_key_path else self.env.test_key_file
-        self.add(f"H3CertificatePath {cert}")
-        self.add(f"H3CertificateKeyPath {key}")
 
         if h3_max_concurrent_streams is not None:
             self.add(f"H3MaxConcurrentStreams {h3_max_concurrent_streams}")

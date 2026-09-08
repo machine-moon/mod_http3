@@ -4,7 +4,7 @@ Advanced build options, dependency management, and build internals.
 
 For quick start and deployment, see [INSTALL](../INSTALL).
 
-For httpd runtime directives (`H3CertificatePath`, VirtualHost), see [httpd Configuration](configuration_httpd.md).
+For httpd runtime directives (`Protocols h3`, `H3Port`, VirtualHost), see [httpd Configuration](configuration_httpd.md).
 
 ## Build Commands
 

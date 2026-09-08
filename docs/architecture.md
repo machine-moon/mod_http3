@@ -47,6 +47,6 @@ bytes as acknowledged once `SSL_write_ex` accepts them.
 
 HTTP/3 connections are UDP/QUIC connections, but request processing runs through standard Apache machinery. HTTP/3 is advertised over existing TCP responses using `Alt-Svc`; clients then establish QUIC on the advertised UDP port.
 
-The module uses the first VirtualHost with both `H3CertificatePath` and `H3CertificateKeyPath` for its listener. Name-based virtual host selection then uses the request authority. IP-based virtual hosts remain unsupported because the necessary per-connection local address is not currently recovered.
+The module's listener presents the certificate of the first VirtualHost that serves HTTP/3 (`h3` in `Protocols` on a host with a mod_ssl certificate); the certificate is loaded in `post_config`, before privileges drop. Name-based virtual host selection then uses the request authority. IP-based virtual hosts remain unsupported because the necessary per-connection local address is not currently recovered.
 
 See the [configuration guide](configuration.md) for operational control points.

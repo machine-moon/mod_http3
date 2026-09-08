@@ -200,5 +200,5 @@ curl has no HTTP/3 support. `curl -V | grep HTTP3` confirms it either way.
 **HTTP/1.1 works but HTTP/3 does not.** Almost always certificate permissions —
 see above. `podman logs mod_http3` shows the error from the child process.
 
-**`Invalid command 'H3CertificatePath'`.** The configuration you mounted does not
+**`Invalid command 'H3Port'`.** The configuration you mounted does not
 load the module. It needs `LoadModule http3_module modules/mod_http3.so`.

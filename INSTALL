@@ -116,15 +116,13 @@
      reject a directly-trusted self-signed leaf. Import ca.crt to trust
      the server. The script refuses to overwrite existing keys.
 
-     The key must be readable by the httpd child user:
-
-     $ chgrp daemon /path/to/httpd/conf/certs/server.key
-     $ chmod 640  /path/to/httpd/conf/certs/server.key
+     The key is read at startup, before httpd drops privileges, so the
+     permissions mod_ssl accepts are enough.
 
   3. Configure httpd.
 
-     LoadModule must appear before the <VirtualHost> block.
-     H3CertificatePath and H3CertificateKeyPath are required.
+     LoadModule must appear before the <VirtualHost> block. A host serves
+     HTTP/3 when h3 is in its Protocols and mod_ssl has its certificate.
 
      Minimal httpd.conf:
 
@@ -142,8 +140,7 @@
             SSLCertificateFile    conf/certs/server.crt
             SSLCertificateKeyFile conf/certs/server.key
 
-            H3CertificatePath    conf/certs/server.crt
-            H3CertificateKeyPath conf/certs/server.key
+            Protocols h3 h2 http/1.1
 
             DocumentRoot htdocs
             <Directory htdocs>
