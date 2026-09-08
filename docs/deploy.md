@@ -20,8 +20,7 @@ Listen 4433 https
     SSLEngine on
     SSLCertificateFile conf/certs/server.crt
     SSLCertificateKeyFile conf/certs/server.key
-    H3CertificatePath conf/certs/server.crt
-    H3CertificateKeyPath conf/certs/server.key
+    Protocols h3 h2 http/1.1
     DocumentRoot htdocs
     <Directory htdocs>
         Require all granted

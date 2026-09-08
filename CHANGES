@@ -3,6 +3,19 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.71 (2026-09-08)
+--------------------
+  *) SECURITY: Load the HTTP/3 certificate and key in post_config, while httpd
+     still runs privileged, so a root-only key no longer fails in the
+     unprivileged child and both mod_ssl and mod_http3 read the same files.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) A host with "h3" in Protocols now serves HTTP/3 with the certificate
+     mod_ssl resolved for it (SSLCertificateFile and mod_md alike), the way
+     mod_http2 rides mod_ssl. H3CertificatePath and H3CertificateKeyPath are
+     removed; drop them from existing configurations.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.70 (2026-09-06)
 --------------------
   *) SECURITY: Updated the httpd submodule so mpm_event tolerates a connection

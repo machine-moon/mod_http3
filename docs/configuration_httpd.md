@@ -15,21 +15,26 @@ mod_http3 enables HTTP/3 protocol support in Apache HTTP Server. The module:
 
 ## Configuration Directives
 
-### H3CertificatePath
+### Enabling HTTP/3 on a host
 
-**Syntax:** `H3CertificatePath /path/to/certificate.pem`
-**Context:** server config, virtual host
-**Required:** Yes
+A VirtualHost serves HTTP/3 when `h3` is in its `Protocols` and mod_ssl has a
+certificate for it -- the same two things mod_http2 needs for `h2`:
 
-Path to the TLS certificate file for HTTP/3 connections. May point to the same file used by `SSLCertificateFile`.
+```apache
+<VirtualHost *:443>
+    ServerName www.example.com
+    SSLEngine on
+    SSLCertificateFile    /etc/httpd/ssl/www.crt
+    SSLCertificateKeyFile /etc/httpd/ssl/www.key
+    Protocols h3 h2 http/1.1
+</VirtualHost>
+```
 
-### H3CertificateKeyPath
-
-**Syntax:** `H3CertificateKeyPath /path/to/private-key.pem`
-**Context:** server config, virtual host
-**Required:** Yes
-
-Path to the TLS private key file for HTTP/3 connections. May point to the same file used by `SSLCertificateKeyFile`.
+The certificate and key mod_ssl resolved for the host -- `SSLCertificateFile`
+pairs and anything mod_md manages -- are loaded for QUIC as well, during
+startup while httpd still runs privileged, so a key readable only by root works
+as it does for mod_ssl. A host with `h3` in `Protocols` but no mod_ssl
+certificate (`SSLEngine off`, or mod_ssl not loaded) does not serve HTTP/3.
 
 ### H3Port
 
@@ -37,7 +42,7 @@ Path to the TLS private key file for HTTP/3 connections. May point to the same f
 **Context:** server config, virtual host
 **Default:** the port of the VirtualHost that configured HTTP/3
 
-UDP port the QUIC listener binds to. When unset, the module reuses the port of the VirtualHost that carries the `H3CertificatePath`/`H3CertificateKeyPath` pair, so TCP (HTTP/1.1, HTTP/2) and UDP (HTTP/3) share the same port number. Set it explicitly to serve HTTP/3 on a different port.
+UDP port the QUIC listener binds to. When unset, the module reuses the port of the VirtualHost that serves HTTP/3, so TCP (HTTP/1.1, HTTP/2) and UDP (HTTP/3) share the same port number. Set it explicitly to serve HTTP/3 on a different port.
 
 ### H3MaxConcurrentStreams
 
@@ -131,7 +136,7 @@ The idle timeout duration in seconds for QUIC connections. This maps to the stan
 **Context:** server config, virtual host
 **Default:** `on`
 
-Whether to issue TLS 1.3 session tickets. A returning client that presents a ticket resumes its session and skips a certificate verification, which is the difference between a two-round-trip and a one-round-trip reconnect. Each worker process holds its own ticket keys, so a client resumes only when it returns to the process that issued its ticket; otherwise the server transparently falls back to a full handshake. Turn this off to force a full handshake on every connection.
+Whether to issue TLS 1.3 session tickets. A returning client that presents a ticket resumes its session and skips a certificate verification, which is the difference between a two-round-trip and a one-round-trip reconnect. The ticket keys are created before httpd forks, so every child process resumes tickets issued by any other; a ticket from before a restart falls back to a full handshake. Turn this off to force a full handshake on every connection.
 
 ### H3AddressValidation
 
@@ -224,8 +229,10 @@ The module automatically detects the port from the VirtualHost configuration:
 # HTTP/3 will listen on port 8443
 <VirtualHost *:8443>
     ServerName secure.example.com
-    H3CertificatePath /etc/httpd/ssl/secure.crt
-    H3CertificateKeyPath /etc/httpd/ssl/secure.key
+    SSLEngine on
+    SSLCertificateFile    /etc/httpd/ssl/secure.crt
+    SSLCertificateKeyFile /etc/httpd/ssl/secure.key
+    Protocols h3 h2 http/1.1
 </VirtualHost>
 ```
 
@@ -233,21 +240,25 @@ Use `H3Port` to bind the QUIC listener to a different UDP port than the VirtualH
 
 ### Multiple VirtualHosts
 
-The module uses the **first VirtualHost** that has both `H3CertificatePath` and `H3CertificateKeyPath` configured:
+The QUIC listener presents the certificate of the **first VirtualHost** that serves HTTP/3; every other HTTP/3 host still advertises `Alt-Svc` and is selected by request authority:
 
 ```apache
-# This VirtualHost is used for HTTP/3
+# This VirtualHost's certificate is the one QUIC presents
 <VirtualHost *:4433>
     ServerName primary.example.com
-    H3CertificatePath /etc/httpd/ssl/primary.crt
-    H3CertificateKeyPath /etc/httpd/ssl/primary.key
+    SSLEngine on
+    SSLCertificateFile    /etc/httpd/ssl/primary.crt
+    SSLCertificateKeyFile /etc/httpd/ssl/primary.key
+    Protocols h3 h2 http/1.1
 </VirtualHost>
 
-# This VirtualHost is ignored for HTTP/3
+# Served over HTTP/3 too, but with primary's certificate
 <VirtualHost *:4433>
     ServerName secondary.example.com
-    H3CertificatePath /etc/httpd/ssl/secondary.crt
-    H3CertificateKeyPath /etc/httpd/ssl/secondary.key
+    SSLEngine on
+    SSLCertificateFile    /etc/httpd/ssl/secondary.crt
+    SSLCertificateKeyFile /etc/httpd/ssl/secondary.key
+    Protocols h3 h2 http/1.1
 </VirtualHost>
 ```
 
@@ -299,8 +310,8 @@ Disable the advertisement entirely with `H3AltSvc off`.
 
 The module validates configuration during Apache startup:
 
-1. **Certificate Path Check:** `H3CertificatePath` is configured
-2. **Key Path Check:** `H3CertificateKeyPath` is configured
+1. At least one host serves HTTP/3: `h3` in `Protocols` on an `SSLEngine on` host
+2. That host's certificate and key load
 
 If either check fails, Apache refuses to start.
 
@@ -330,15 +341,16 @@ LogLevel http3:trace8
 
 ```
 # Successful configuration
-h3_post_config: pid=[PID] cert=/path/to/cert key=/path/to/key h3_port=443 mpm=event threaded=1 forked=2 max_threads=25
+mod_http3: serving HTTP/3 with mod_ssl certificate /path/to/cert
+h3_post_config: pid=[PID] h3_port=443 mpm=event threaded=1 forked=2 max_threads=25
 
 # Worker thread started
 h3_child_init
 worker_thread_main
 
 # Errors
-mod_http3: H3CertificatePath directive is required but not configured
-mod_http3: H3CertificateKeyPath directive is required but not configured
+mod_http3: no host serves HTTP/3: add h3 to Protocols on a host with SSLEngine on
+mod_http3: loading certificate /path/to/cert with key /path/to/key failed: ...
 ```
 
 ### Security

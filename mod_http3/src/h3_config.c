@@ -23,6 +23,7 @@
 #include <http_core.h>
 #include <http_log.h>
 #include <http_main.h>
+#include <http_protocol.h>
 
 #include <apr_cstr.h>
 #include <apr_pools.h>
@@ -36,6 +37,7 @@
 #include "h3_os.h"
 #include "h3_request.h"
 #include "mod_http3.h"
+#include "quic/detail/h3q_tls.h"
 
 apr_port_t get_server_port(const server_rec* s)
 {
@@ -60,8 +62,6 @@ void* h3_merge_server_config(apr_pool_t* p, void* base_conf, void* new_conf)
     h3_server_conf* base = (h3_server_conf*)base_conf;
     h3_server_conf* new = (h3_server_conf*)new_conf;
 
-    merged->h3_cert_path = new->h3_cert_path ? new->h3_cert_path : base->h3_cert_path;
-    merged->h3_key_path = new->h3_key_path ? new->h3_key_path : base->h3_key_path;
     merged->h3_port = new->h3_port ? new->h3_port : base->h3_port;
     merged->h3_max_concurrent_streams = new->h3_max_concurrent_streams ? new->h3_max_concurrent_streams : base->h3_max_concurrent_streams;
     merged->h3_max_connections = new->h3_max_connections ? new->h3_max_connections : base->h3_max_connections;
@@ -93,28 +93,6 @@ static int mpm_query(int code)
 {
     int value = 0;
     return ap_mpm_query(code, &value) == APR_SUCCESS ? value : -1;
-}
-
-static const char* set_string(cmd_parms* cmd, const char* arg, const char* field)
-{
-    h3_server_conf* conf = ap_get_module_config(cmd->server->module_config, &http3_module);
-    if (!conf)
-    {
-        ap_log_error(APLOG_MARK, APLOG_ERR, 0, cmd->server, "mod_http3: server config missing in directive");
-        return "mod_http3: internal error: no server config";
-    }
-    *(const char**)((char*)conf + (apr_size_t)field) = apr_pstrdup(cmd->pool, arg);
-    return NULL;
-}
-
-static const char* set_h3_cert_path(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
-{
-    return set_string(cmd, arg, (const char*)offsetof(h3_server_conf, h3_cert_path));
-}
-
-static const char* set_h3_key_path(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
-{
-    return set_string(cmd, arg, (const char*)offsetof(h3_server_conf, h3_key_path));
 }
 
 static const char* set_h3_port(cmd_parms* cmd, void* dummy H3_UNUSED, const char* arg)
@@ -585,6 +563,33 @@ static const char* set_h3_alt_svc_max_age(cmd_parms* cmd, void* dummy H3_UNUSED,
     return NULL;
 }
 
+static apr_status_t ssl_ctx_cleanup(void* data)
+{
+    SSL_CTX_free(data);
+    return APR_SUCCESS;
+}
+
+int h3_ssl_add_cert_files(server_rec* s, apr_pool_t* p, apr_array_header_t* cert_files, apr_array_header_t* key_files)
+{
+    CHECK(s && p && cert_files && key_files, return DECLINED;);
+    h3_server_conf* conf = ap_get_module_config(s->module_config, &http3_module);
+    if (!conf || ap_state_query(AP_SQ_MAIN_STATE) == AP_SQ_MS_CREATE_PRE_CONFIG || !ap_is_allowed_protocol(NULL, NULL, s, "h3") || cert_files->nelts == 0)
+    {
+        return DECLINED;
+    }
+    /* Still privileged here, so a root-only key loads the way it does for mod_ssl. */
+    char err[H3Q_ERRLEN] = {0};
+    conf->ssl_ctx = h3q_tls_ctx_create((const char* const*)cert_files->elts, (size_t)cert_files->nelts, (const char* const*)key_files->elts, (size_t)key_files->nelts, conf->h3_session_tickets != H3_FLAG_OFF, err, sizeof(err));
+    if (!conf->ssl_ctx)
+    {
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: %s", err);
+        return HTTP_INTERNAL_SERVER_ERROR;
+    }
+    apr_pool_cleanup_register(p, conf->ssl_ctx, ssl_ctx_cleanup, apr_pool_cleanup_null);
+    ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "mod_http3: serving HTTP/3 with mod_ssl certificate %s", APR_ARRAY_IDX(cert_files, 0, const char*));
+    return DECLINED;
+}
+
 int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool_t* ptemp, server_rec* s)
 {
     CHECK(ptemp);
@@ -599,7 +604,7 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
     for (server_rec* vs = s; vs; vs = vs->next)
     {
         h3_server_conf* vc = ap_get_module_config(vs->module_config, &http3_module);
-        if (vc->h3_cert_path && vc->h3_key_path)
+        if (vc->ssl_ctx)
         {
             vc->host_port = get_server_port(vs);
             if (vc->h3_port == 0)
@@ -683,34 +688,21 @@ int h3_post_config(apr_pool_t* p H3_UNUSED, apr_pool_t* plog H3_UNUSED, apr_pool
             {
                 vc->h3_idle_timeout = H3_IDLE_TIMEOUT_DEFAULT;
             }
-            conf = vc;
-            break;
+            if (!conf)
+            {
+                conf = vc; /* the first host owns the listener; the rest still advertise it */
+                ap_log_error(APLOG_MARK, APLOG_INFO, 0, vs, "h3_post_config: pid=%d h3_port=%d mpm=%s threaded=%d forked=%d max_threads=%d", h3_getpid(), (int)vc->h3_port, ap_show_mpm(), mpm_query(AP_MPMQ_IS_THREADED), mpm_query(AP_MPMQ_IS_FORKED), mpm_query(AP_MPMQ_MAX_THREADS));
+            }
         }
     }
 
-    CHECK(conf && conf->h3_cert_path && conf->h3_key_path, return HTTP_INTERNAL_SERVER_ERROR;);
-
-    /* Validate cert and key files are readable */
-    apr_file_t* f = NULL;
-    if (apr_file_open(&f, conf->h3_cert_path, APR_READ, APR_OS_DEFAULT, ptemp) != APR_SUCCESS)
+    if (!conf)
     {
-        ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: H3CertificatePath not readable: %s", conf->h3_cert_path);
+        ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: no host serves HTTP/3: add h3 to Protocols on a host with SSLEngine on");
         return HTTP_INTERNAL_SERVER_ERROR;
     }
-    apr_file_close(f);
-    f = NULL;
-
-    if (apr_file_open(&f, conf->h3_key_path, APR_READ, APR_OS_DEFAULT, ptemp) != APR_SUCCESS)
-    {
-        ap_log_error(APLOG_MARK, APLOG_ERR, 0, s, "mod_http3: H3CertificateKeyPath not readable: %s", conf->h3_key_path);
-        return HTTP_INTERNAL_SERVER_ERROR;
-    }
-    apr_file_close(f);
 
     h3_request_init();
-
-    ap_log_error(APLOG_MARK, APLOG_INFO, 0, s, "h3_post_config: pid=%d cert=%s key=%s h3_port=%d mpm=%s threaded=%d forked=%d max_threads=%d", h3_getpid(), conf->h3_cert_path, conf->h3_key_path, (int)conf->h3_port, ap_show_mpm(), mpm_query(AP_MPMQ_IS_THREADED), mpm_query(AP_MPMQ_IS_FORKED),
-                 mpm_query(AP_MPMQ_MAX_THREADS));
     return OK;
 }
 
@@ -727,8 +719,6 @@ void* h3_merge_dir_config(apr_pool_t* p H3_UNUSED, void* base, void* add H3_UNUS
 }
 
 const command_rec h3_cmds[] = {
-    AP_INIT_TAKE1("H3CertificatePath", set_h3_cert_path, NULL, RSRC_CONF, "Path to the SSL certificate file for HTTP/3"),
-    AP_INIT_TAKE1("H3CertificateKeyPath", set_h3_key_path, NULL, RSRC_CONF, "Path to the SSL certificate key file for HTTP/3"),
     AP_INIT_TAKE1("H3Port", set_h3_port, NULL, RSRC_CONF, "UDP port to listen on for QUIC/HTTP-3 (default: same as main server)"),
     AP_INIT_TAKE1("H3MaxConcurrentStreams", set_h3_max_concurrent_streams, NULL, RSRC_CONF, "Maximum number of concurrent HTTP/3 streams per connection (default: 100)"),
     AP_INIT_TAKE1("H3MaxConnections", set_h3_max_connections, NULL, RSRC_CONF, "Maximum concurrent QUIC/HTTP/3 connections per child process (default: 256)"),

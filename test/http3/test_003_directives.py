@@ -30,12 +30,11 @@ class TestH3Directives:
         assert "H3Port" in conf
         assert str(env.https_port) in conf
 
-    def test_003_h3_cert_directives_in_vhost(self, env):
+    def test_003_h3_cert_inherited_from_mod_ssl(self, env):
+        # No mod_http3 certificate directive exists; mod_ssl's pair is what QUIC serves.
         conf = _read_test_conf(env)
-        assert "H3CertificatePath" in conf
-        assert "H3CertificateKeyPath" in conf
-        assert env.test_cert_file in conf
-        assert env.test_key_file in conf
+        assert "SSLCertificateFile" in conf
+        assert env.apache_restart() == 0
 
     def test_004_protocols_h3_in_vhost(self, env):
         conf = _read_test_conf(env)
