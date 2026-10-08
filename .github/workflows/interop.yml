@@ -142,12 +142,19 @@ jobs:
           mv impls.json implementations_quic.json
 
       - name: Run matrix
-        continue-on-error: true
-        run: python run.py -s mod_http3 -c "$CLIENT" -t http3 -l logs -j results.json
+        # The runner's tshark can crash on a cut capture: allow 2 failed tries.
+        run: |
+          for try in 1 2 3; do
+            rm -f results.json
+            python run.py -s mod_http3 -c "$CLIENT" -t http3 -l logs/$try -j results.json || true
+            result=$(jq -r '.results[0][0].result' results.json 2>/dev/null || true)
+            case $result in succeeded|unsupported) break ;; esac
+            echo "::warning title=$CLIENT::try $try: ${result:-no result}"
+          done
 
       - name: Report verdict
         run: |
-          result=$(jq -r '.results[0][0].result' results.json)
+          result=$(jq -r '.results[0][0].result' results.json 2>/dev/null || echo 'no result')
           echo "### $CLIENT — \`$result\`" >>"$GITHUB_STEP_SUMMARY"
           case $result in
             succeeded)   ;;
