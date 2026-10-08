@@ -240,7 +240,7 @@ Use `H3Port` to bind the QUIC listener to a different UDP port than the VirtualH
 
 ### Multiple VirtualHosts
 
-All HTTP/3 hosts on a port share one QUIC listener. The certificate is chosen by the client's SNI: a host is matched on its `ServerName` and exact `ServerAlias` names (wildcard aliases are not matched) and presents its own certificate; a name that matches no host gets the listener's default, the certificate of the first HTTP/3 host in the configuration chain. Requests are then routed by authority as for TCP:
+All HTTP/3 hosts on a port share one QUIC listener. The certificate is chosen by the client's SNI: a host is matched on its `ServerName` and `ServerAlias` names, wildcards included, the way httpd matches virtual hosts, and presents its own certificate; a name that matches no host gets the listener's default, the certificate of the first HTTP/3 host in the configuration chain. Requests are then routed by authority as for TCP:
 
 ```apache
 <VirtualHost *:4433>

@@ -17,7 +17,9 @@ v0.0.71 (2026-09-08)
      [Alexander Gerasimov <codeguard gmail.com>]
 
   *) Select the HTTP/3 certificate by SNI, so each virtual host on a shared
-     port serves its own certificate instead of the first host's.
+     port serves its own certificate instead of the first host's. Names
+     are matched as httpd matches virtual hosts, wildcard ServerAlias
+     included.
      [Alexander Gerasimov <codeguard gmail.com>]
 
   *) Give every virtual host its own mod_http3 configuration

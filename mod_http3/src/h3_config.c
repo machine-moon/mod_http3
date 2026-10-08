@@ -607,7 +607,8 @@ static int h3_sni_select_cert(SSL* ssl, void* arg)
     for (int i = 0; sni && i < hosts->nelts; i++)
     {
         const h3_sni_host* h = &APR_ARRAY_IDX(hosts, i, h3_sni_host);
-        if (apr_cstr_casecmp(h->name, sni) == 0)
+        /* httpd's ServerAlias matcher: wildcards for wild_names, exact otherwise. */
+        if (ap_strcasecmp_match(sni, h->name) == 0)
         {
             STACK_OF(X509)* chain = NULL;
             SSL_CTX_get0_chain_certs(h->ctx, &chain);
@@ -643,11 +644,17 @@ int h3_post_config(apr_pool_t* p, apr_pool_t* plog H3_UNUSED, apr_pool_t* ptemp,
                 e->name = vs->server_hostname;
                 e->ctx = vc->ssl_ctx;
             }
-            /* ServerAlias exact names; wildcards are not matched (ponytail: exact only). */
+            /* ServerAlias: httpd keeps exact names in names and wildcards in wild_names. */
             for (int i = 0; vs->names && i < vs->names->nelts; i++)
             {
                 h3_sni_host* e = apr_array_push(sni);
                 e->name = APR_ARRAY_IDX(vs->names, i, const char*);
+                e->ctx = vc->ssl_ctx;
+            }
+            for (int i = 0; vs->wild_names && i < vs->wild_names->nelts; i++)
+            {
+                h3_sni_host* e = apr_array_push(sni);
+                e->name = APR_ARRAY_IDX(vs->wild_names, i, const char*);
                 e->ctx = vc->ssl_ctx;
             }
             vc->host_port = get_server_port(vs);

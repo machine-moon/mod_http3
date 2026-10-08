@@ -21,7 +21,7 @@ class TestSni:
         creds.save_pkey_pem(key)
 
         conf = H3Conf(env)
-        conf.add_vhost_test1()
+        conf.add_vhost_test1(extra_lines=[f"ServerAlias *.wild.{env.http_tld}"])
         conf.start_vhost([name], doc_root="htdocs/two", with_ssl=True, with_certificates=False)
         conf.add(f"SSLCertificateFile {cert}")
         conf.add(f"SSLCertificateKeyFile {key}")
@@ -44,3 +44,11 @@ class TestSni:
 
     def test_002_first_host_keeps_the_shared_certificate(self, env):
         assert f"test2.{env.http_tld}" not in self._subject(env, "test1")
+
+    def test_003_wildcard_alias_gets_its_host_certificate(self, env):
+        """A name matched only by test1's wildcard ServerAlias gets test1's certificate."""
+        assert self._subject(env, "a.wild") == self._subject(env, "test1")
+
+    def test_004_wildcard_does_not_match_the_bare_domain(self, env):
+        """*.wild.<tld> does not match wild.<tld>, as in httpd, so it falls back to the listener default."""
+        assert self._subject(env, "wild") != self._subject(env, "test1")
