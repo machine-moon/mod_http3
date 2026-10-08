@@ -33,3 +33,10 @@
 	ignore = dirty
 	update = checkout
 	branch = openssl-3.5
+[submodule "dependencies/ngtcp2"]
+	path = dependencies/ngtcp2
+	url = https://github.com/ngtcp2/ngtcp2.git
+	shallow = true
+	ignore = untracked
+	update = checkout
+	#branch = main # tag: v1.25.0

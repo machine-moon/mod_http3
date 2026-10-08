@@ -4,7 +4,7 @@
 
 ```mermaid
 flowchart LR
-    Client[HTTP/3 client] -->|UDP QUIC + TLS 1.3| Engine[OpenSSL QUIC]
+    Client[HTTP/3 client] -->|UDP QUIC + TLS 1.3| Engine[ngtcp2 QUIC + OpenSSL TLS]
     Engine --> nghttp3[nghttp3 HTTP/3]
     nghttp3 --> Module[mod_http3]
     Module --> httpd[Apache httpd request pipeline]
@@ -15,8 +15,9 @@ flowchart LR
 
 ## Layers
 
-- **OpenSSL** owns transport and TLS 1.3: packets, loss recovery, streams and
-  the handshake. See [The QUIC layer](#the-quic-layer).
+- **ngtcp2** owns the transport: packets, loss recovery, flow control and
+  streams. **OpenSSL** runs the TLS 1.3 handshake through its QUIC TLS API.
+  See [The QUIC layer](#the-quic-layer).
 - **nghttp3** handles HTTP/3 frames, streams, and QPACK interactions.
 - **mod_http3** bridges QUIC streams with Apache request/response processing.
 - **Apache httpd** supplies routing, virtual-host selection, filters, and handlers.
@@ -24,24 +25,36 @@ flowchart LR
 
 ## The QUIC layer
 
-Every OpenSSL QUIC call the module makes lives under `quic/`, behind symbols
-prefixed `h3q_`. This is a wrapper, not an abstraction. There is one transport,
-OpenSSL's, and the layer exists to keep `SSL*`, `BIO*` and the QUIC listener
-out of the rest of the module, not to allow a second implementation.
+Every ngtcp2 and OpenSSL call the module makes lives under `quic/`, behind
+symbols prefixed `h3q_`. This is a wrapper, not an abstraction. There is one
+transport, ngtcp2 with OpenSSL as its TLS backend, and the layer exists to keep
+`ngtcp2_conn*` and `SSL*` out of the rest of the module, not to allow a second
+implementation. The engine reads the UDP socket itself, maps connection IDs to
+connections, answers Retry and Version Negotiation, and runs the ngtcp2 timers.
 
-Nothing outside `quic/` includes an OpenSSL header, and the published API
-documentation excludes both `detail/` directories.
+Nothing outside `quic/` includes an ngtcp2 or OpenSSL header, and the
+published API documentation excludes both `detail/` directories.
 
-The module hands over one `h3q_config`, holding the certificate path, the key
-path, and whether to validate client addresses with a Retry packet, and gets
-back an opaque `h3q_engine`. Connections and streams are opaque too, so
+The module hands over one `h3q_config`, holding the TLS context, the idle
+timeout, the stream limit, whether to validate client addresses with a Retry
+packet and whether to accept 0-RTT, and gets back an opaque `h3q_engine`. Connections and streams are opaque too, so
 `<openssl/ssl.h>` stays out of every header above this layer. Failures come
 back through a caller-supplied error buffer rather than the log, because
 `quic/` has no `server_rec` to log against.
 
 nghttp3 sits above this layer and never sees it. One behaviour is worth
-knowing: OpenSSL exposes no per-stream acknowledgements, so the module counts
-bytes as acknowledged once `SSL_write_ex` accepts them.
+knowing: ngtcp2 does not copy stream data, so the buffers nghttp3 hands out
+stay in place until the peer acknowledges them. The engine reports each
+acknowledgement through the `stream_acked` callback and the module passes it
+to nghttp3, which then releases the buffer.
+
+0-RTT: with `H3EarlyData on`, a resumed client may send its first request
+before the handshake completes. The engine queues such streams, the module
+starts the session at once and runs safe methods immediately; other methods
+wait until the handshake completes, because 0-RTT data can be replayed
+(RFC 8470). The safe-method rule is the replay defence; the TLS layer sets
+`SSL_OP_NO_ANTI_REPLAY`, since OpenSSL's own anti-replay is built for TLS
+over TCP and refuses QUIC resumption with early data.
 
 ## Important Boundaries
 

@@ -9,7 +9,7 @@ For build and installation, see [INSTALL](../INSTALL).
 mod_http3 enables HTTP/3 protocol support in Apache HTTP Server. The module:
 
 - Creates a separate worker thread for HTTP/3 connections over UDP/QUIC
-- Uses OpenSSL for QUIC/TLS 1.3 support
+- Uses ngtcp2 for QUIC and OpenSSL for TLS 1.3
 - Uses nghttp3 for HTTP/3 protocol handling
 - Integrates with Apache's standard request processing pipeline
 
@@ -128,7 +128,7 @@ The timeout duration in seconds for QUIC handshakes to complete. If a connection
 **Context:** server config, virtual host
 **Default:** `300`
 
-The idle timeout duration in seconds for QUIC connections. This maps to the standard QUIC `max_idle_timeout` transport parameter. A connection will be closed if no traffic is sent or received within this timeframe. Use a higher value for applications that require long-lived idle connections (e.g., long-polling, WebSockets over HTTP/3).
+The idle timeout duration in seconds for QUIC connections. A connection with no application progress for this time is closed cleanly with NO_ERROR. The QUIC `max_idle_timeout` transport parameter is set 2 seconds higher, so the clean close comes first and the transport timer only drops a peer that went silent. Use a higher value for applications that require long-lived idle connections (e.g., long-polling, WebSockets over HTTP/3).
 
 ### H3SessionTickets
 
@@ -137,6 +137,14 @@ The idle timeout duration in seconds for QUIC connections. This maps to the stan
 **Default:** `on`
 
 Whether to issue TLS 1.3 session tickets. A returning client that presents a ticket resumes its session and skips a certificate verification, which is the difference between a two-round-trip and a one-round-trip reconnect. The ticket keys are created before httpd forks, so every child process resumes tickets issued by any other; a ticket from before a restart falls back to a full handshake. Turn this off to force a full handshake on every connection.
+
+### H3EarlyData
+
+**Syntax:** `H3EarlyData on|off`
+**Context:** server config, virtual host
+**Default:** `off`
+
+Whether to accept 0-RTT request data on a resumed connection. A returning client sends its first request together with the handshake and gets the response one round trip sooner. 0-RTT data can be replayed (RFC 9001 section 9.2), so only safe methods (GET, HEAD, OPTIONS, TRACE) run before the handshake completes; other methods wait for it (RFC 8470). Requires `H3SessionTickets on`.
 
 ### H3AddressValidation
 

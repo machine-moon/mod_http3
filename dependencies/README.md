@@ -13,6 +13,7 @@ mod_http3 uses **git submodules** for all dependencies. By default, all dependen
 | APR         | `dependencies/apr`          | `1.7.x`         | 1.7.7             | APR v2-dev (trunk) will subsume APR-util 1.x APIs. |
 | APR-util    | `dependencies/apr-util`     | `1.6.x`         | 1.6.4             | Legacy companion library; kept for APR 1.x compatibility. |
 | nghttp3     | `dependencies/nghttp3`      | `main`          | 1.17.0            | HTTP/3 framing and QPACK.      |
+| ngtcp2      | `dependencies/ngtcp2`       | tag `v1.25.0`   | 1.25.0            | QUIC transport; needs OpenSSL >= 3.5 (QUIC TLS API). |
 
 All submodules are shallow (`shallow = true`). Initialise them once:
 
@@ -20,6 +21,7 @@ All submodules are shallow (`shallow = true`). Initialise them once:
 git submodule sync
 git submodule update --init
 git submodule update --init --recursive dependencies/nghttp3
+git submodule update --init dependencies/ngtcp2
 ```
 
 ---
@@ -44,14 +46,15 @@ mod_http3 uses APR bucket types (`AP_BUCKET_IS_RESPONSE`, etc.) that were introd
 
 ### Default -- Build from source
 
-CMake builds OpenSSL, APR, APR-util, httpd, and nghttp3 from their respective git submodules at **configure time**, installing each into `dependencies/<dep>-dist/`. A small marker file (`dependencies/<dep>-dist/.done`) is used to skip rebuilding dependencies that are already up to date.
+CMake builds OpenSSL, APR, APR-util, httpd, nghttp3 and ngtcp2 from their respective git submodules at **configure time**, installing each into `dependencies/<dep>-dist/`. A small marker file (`dependencies/<dep>-dist/.done`) is used to skip rebuilding dependencies that are already up to date.
 
 **Build order enforced by CMake:**
 1. nghttp3 (`dependencies/nghttp3`) -> `dependencies/nghttp3-dist/`
 2. OpenSSL (`dependencies/openssl`) -> `dependencies/openssl-dist/`
-3. APR (`dependencies/apr`) -> `dependencies/apr-dist/`
-4. APR-util (`dependencies/apr-util`) -> `dependencies/apr-util-dist/`
-5. httpd (`dependencies/httpd`) -> `dependencies/httpd-dist/`
+3. ngtcp2 (`dependencies/ngtcp2`) -> `dependencies/ngtcp2-dist/`
+4. APR (`dependencies/apr`) -> `dependencies/apr-dist/`
+5. APR-util (`dependencies/apr-util`) -> `dependencies/apr-util-dist/`
+6. httpd (`dependencies/httpd`) -> `dependencies/httpd-dist/`
 
 ```sh
 # default: builds all dependencies from source (first configure is slow; subsequent ones are instant from cache)
@@ -82,6 +85,7 @@ Provide `WITH_*` paths to use system-installed dependencies instead of building 
 | `WITH_APR=/path` | APR source build | >= 1.7.0 |
 | `WITH_APU=/path` | APR-util source build | >= 1.6.0 |
 | `WITH_NGHTTP3=/path` | nghttp3 source build | ≥ 1.16.0 |
+| `WITH_NGTCP2=/path` | ngtcp2 source build, with OpenSSL | ≥ 1.25.0 |
 
 ```sh
 cmake -B build -DWITH_SSL=/opt/openssl -DWITH_HTTPD=/opt/httpd

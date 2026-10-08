@@ -11,6 +11,7 @@ Default build compiles all dependencies (OpenSSL, APR, APR-util, httpd) from sub
 ```sh
 git submodule update --init
 git submodule update --init --recursive dependencies/nghttp3
+git submodule update --init dependencies/ngtcp2
 cmake -B build
 cmake --build build
 ```
@@ -39,6 +40,7 @@ See [INSTALL](INSTALL) for full build instructions.
 | `WITH_APR` | (empty) | Path to APR prefix (overrides source build) |
 | `WITH_APU` | (empty) | Path to APR-util prefix (overrides source build) |
 | `WITH_NGHTTP3` | (empty) | Path to nghttp3 prefix (overrides source build) |
+| `WITH_NGTCP2` | (empty) | Path to ngtcp2 prefix, built with OpenSSL (overrides source build) |
 | `ENABLE_ASAN` | `OFF` | Address Sanitizer (requires `Debug`) |
 | `ENABLE_UBSAN` | `OFF` | UB Sanitizer (requires `Debug`) |
 | `ENABLE_WERROR` | `OFF` | Treat warnings as errors |

@@ -18,8 +18,9 @@ For httpd runtime directives (`Protocols h3`, `H3Port`, VirtualHost), see [httpd
 | `cmake -LH -N -B build` | Print all cache variables |
 
 ```sh
-# Module only (with system deps via WITH_SSL/WITH_HTTPD/WITH_NGHTTP3)
+# Module only (with system deps via WITH_SSL/WITH_HTTPD/WITH_NGHTTP3/WITH_NGTCP2)
 git submodule update --init --recursive dependencies/nghttp3
+git submodule update --init dependencies/ngtcp2
 ```
 
 Reset submodules:
@@ -37,7 +38,8 @@ Build order:
 
 1. nghttp3 -> `dependencies/nghttp3-dist/`
 2. OpenSSL -> `dependencies/openssl-dist/`
-3. APR -> `dependencies/apr-dist/`
+3. ngtcp2 -> `dependencies/ngtcp2-dist/`
+4. APR -> `dependencies/apr-dist/`
 4. APR-util -> `dependencies/apr-util-dist/`
 5. httpd -> `dependencies/httpd-dist/`
 
@@ -59,6 +61,7 @@ Provide `WITH_*` variables to override individual dependencies with system-insta
 | APR | `WITH_APR=/path` | >= 1.7.0 |
 | APU | `WITH_APU=/path` | >= 1.6.0 |
 | nghttp3 | `WITH_NGHTTP3=/path` | >= 1.18.0 |
+| ngtcp2 | `WITH_NGTCP2=/path` | >= 1.25.0, built with OpenSSL |
 
 > Distro-packaged httpd (Ubuntu, Fedora, etc.) ships with MMN < 20211221 and will fail configure. Use build-from-source mode instead.
 

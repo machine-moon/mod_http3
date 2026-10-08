@@ -29,6 +29,7 @@ jobs:
         run: |
           git submodule update --init
           git submodule update --init --recursive dependencies/nghttp3
+          git submodule update --init dependencies/ngtcp2
 
       - name: Set up NASM
         shell: pwsh
@@ -86,12 +87,13 @@ jobs:
           @(
             "dependencies/apr-dist/bin"
             "dependencies/nghttp3-dist/bin"
+            "dependencies/ngtcp2-dist/bin"
             "dependencies/openssl-dist/bin"
             "$env:VCPKG_INSTALLATION_ROOT/installed/x64-windows/bin"
             $redist.FullName
           ) | ForEach-Object { Get-ChildItem $_ -Filter *.dll | Copy-Item -Destination stage/bin -Force }
 
-          $required = 'libapr-1.dll', 'libaprutil-1.dll', 'nghttp3.dll',
+          $required = 'libapr-1.dll', 'libaprutil-1.dll', 'nghttp3.dll', 'ngtcp2.dll', 'ngtcp2_crypto_ossl.dll',
                       'libssl-3-x64.dll', 'libcrypto-3-x64.dll', 'VCRUNTIME140.dll'
           foreach ($dll in $required) {
             if (-not (Test-Path "stage/bin/$dll")) { throw "staging is missing $dll" }

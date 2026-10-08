@@ -13,6 +13,7 @@
   To use system-installed dependencies, provide WITH_* paths:
 
      $ git submodule update --init dependencies/nghttp3
+     $ git submodule update --init dependencies/ngtcp2
      $ cmake -B build \
          -DWITH_SSL=/opt/openssl \
          -DWITH_HTTPD=/opt/httpd \
@@ -35,11 +36,12 @@
 
   Requirements:
 
-     OpenSSL >= 3.5.0 (with QUIC support)
+     OpenSSL >= 3.5.0 (with the QUIC TLS API)
      httpd    MMN >= 20211221
      APR      >= 1.7.0
      APU      >= 1.6.0
      nghttp3  >= 1.18.0
+     ngtcp2   >= 1.25.0 (built with OpenSSL)
 
   APR-util needs expat and httpd needs PCRE2. Neither is a submodule:
   both belong to the server stack rather than to mod_http3, and both are

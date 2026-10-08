@@ -2,7 +2,7 @@
 
 ## HTTP/3 for Apache httpd
 
-`mod_http3` is an Apache httpd module that serves HTTP/3 over QUIC. It integrates with the standard httpd request pipeline while adding a UDP/QUIC listener, TLS 1.3 handling through OpenSSL, and HTTP/3 framing through nghttp3.
+`mod_http3` is an Apache httpd module that serves HTTP/3 over QUIC. It integrates with the standard httpd request pipeline while adding a UDP/QUIC listener, QUIC through ngtcp2, TLS 1.3 through OpenSSL, and HTTP/3 framing through nghttp3.
 
 The module advertises HTTP/3 with `Alt-Svc` by default, allowing compatible clients to discover the UDP endpoint from a TCP response.
 
@@ -22,6 +22,7 @@ Configuration and C API may change between releases. Read the [versioning policy
 | Component | Responsibility |
 | --- | --- |
 | Apache httpd | Request routing, virtual hosts, filters, and module hosting |
-| OpenSSL 3.5+ | QUIC transport and TLS 1.3 |
+| ngtcp2 | QUIC transport |
+| OpenSSL 3.5+ | TLS 1.3 handshake and packet protection |
 | nghttp3 | HTTP/3 framing and stream state |
 | APR / APR-util | Portable threads, pools, and sockets |

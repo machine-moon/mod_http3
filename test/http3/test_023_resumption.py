@@ -112,12 +112,19 @@ class TestSessionResumption:
         assert resumed is False
         assert ticket is None, "H3SessionTickets off must issue no ticket"
 
-    def test_007_ticket_never_advertises_early_data(self, env):
-        """OpenSSL's QUIC server drops 0-RTT packets, so our tickets must never invite them."""
+    def test_007_no_early_data_advert_by_default(self, env):
+        """H3EarlyData is off by default, so a ticket must not invite 0-RTT."""
         H3Conf(env).add_vhost_test1(h3_session_tickets=True).install()
         assert env.apache_restart() == 0
         _, ticket = _handshake(env)
         assert ticket is not None
         assert not getattr(ticket, "max_early_data_size", 0), (
-            "the ticket advertises 0-RTT the server cannot honour; clients will send "
-            "early data it discards, and an unclamped value fails RFC 9001 4.6.1")
+            "the ticket advertises 0-RTT although H3EarlyData is off")
+
+    def test_008_early_data_advertised_when_on(self, env):
+        """With H3EarlyData on, the ticket must advertise 0xffffffff (RFC 9001 4.6.1)."""
+        H3Conf(env).add_vhost_test1(h3_session_tickets=True, h3_early_data=True).install()
+        assert env.apache_restart() == 0
+        _, ticket = _handshake(env)
+        assert ticket is not None
+        assert getattr(ticket, "max_early_data_size", 0) == 0xffffffff

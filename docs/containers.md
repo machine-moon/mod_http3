@@ -120,7 +120,7 @@ podman compose --profile linux down -v
 Both services sit behind a profile — `linux` builds from your checkout,
 `windows` pulls the published image — so a bare `compose up` starts nothing.
 
-A cold build takes about ten minutes — OpenSSL, APR, APR-util, nghttp3 and httpd
+A cold build takes about ten minutes — OpenSSL, APR, APR-util, nghttp3, ngtcp2 and httpd
 are all compiled from source.
 
 ## Which tag to pull

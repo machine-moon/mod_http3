@@ -1,11 +1,12 @@
 # Build
 
-The default build compiles OpenSSL, APR, APR-util, httpd and nghttp3 from the
+The default build compiles OpenSSL, APR, APR-util, httpd, nghttp3 and ngtcp2 from the
 submodules. Use it when the system httpd's module magic number is too old.
 
 ```sh
 git submodule update --init
 git submodule update --init --recursive dependencies/nghttp3
+git submodule update --init dependencies/ngtcp2
 cmake -B build
 cmake --build build
 ```
@@ -19,11 +20,12 @@ clones OpenSSL's external test submodules, which the build never uses.
 
 | Dependency | Minimum |
 | --- | --- |
-| OpenSSL | 3.5.0 with QUIC support |
+| OpenSSL | 3.5.0 with the QUIC TLS API |
 | Apache httpd | 2.5.1+ or 2.4.69+ |
 | APR | 1.7.0 |
 | APR-util | 1.6.0 |
 | nghttp3 | 1.18.0 |
+| ngtcp2 | 1.25.0, built with OpenSSL |
 
 The submodule build produces these. Supply your own with the `WITH_*` options
 only if they meet the minimums; a distribution httpd is usually rejected on MMN.
@@ -31,7 +33,7 @@ only if they meet the minimums; a distribution httpd is usually rejected on MMN.
 ## Custom Prefixes
 
 ```sh
-git submodule update --init dependencies/nghttp3
+git submodule update --init dependencies/nghttp3 dependencies/ngtcp2
 cmake -B build \
     -DWITH_SSL=/opt/openssl \
     -DWITH_HTTPD=/opt/httpd \

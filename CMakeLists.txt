@@ -47,6 +47,7 @@ option(ENABLE_ASAN "Address Sanitizer" OFF)
 option(ENABLE_WERROR "Treat warnings as errors" OFF)
 
 set(WITH_NGHTTP3 "" CACHE PATH "Path to nghttp3 installation prefix")
+set(WITH_NGTCP2 "" CACHE PATH "Path to ngtcp2 installation prefix, built with OpenSSL")
 set(WITH_SSL "" CACHE PATH "Path to OpenSSL installation prefix")
 set(WITH_HTTPD "" CACHE PATH "Path to httpd installation prefix (includes APR/APU)")
 set(WITH_APR "" CACHE PATH "Path to APR installation prefix")
@@ -63,8 +64,9 @@ include(flags)
 add_library(${PROJECT_NAME}-deps INTERFACE)
 include(nghttp3)
 include(openssl)
+include(ngtcp2)
 include(httpd)
-target_link_libraries(${PROJECT_NAME}-deps INTERFACE nghttp3 openssl httpd)
+target_link_libraries(${PROJECT_NAME}-deps INTERFACE nghttp3 openssl ngtcp2 httpd)
 
 # -- Core object library --
 file(GLOB_RECURSE sources CONFIGURE_DEPENDS mod_http3/src/*.c)

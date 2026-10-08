@@ -31,6 +31,7 @@ A clear description of what you expected to happen.
  - httpd Version: [e.g. 2.5.0-trunk]
  - OpenSSL Version: [e.g. 3.5.0]
  - nghttp3 Version: [e.g. 1.17.0]
+ - ngtcp2 Version: [e.g. 1.25.0]
  - APR Version: [e.g. 1.7.0]
 
 **Crash Logs & Additional Context**
