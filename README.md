@@ -69,9 +69,6 @@ Listen 4433 https
 
     Protocols h3 h2 http/1.1
 
-    H3CertificatePath     conf/server.crt
-    H3CertificateKeyPath  conf/server.key
-
     DocumentRoot htdocs
     <Directory htdocs>
         Require all granted

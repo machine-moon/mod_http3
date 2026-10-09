@@ -89,11 +89,11 @@ Listen 8443 https
 
 <VirtualHost *:8443>
     SSLEngine on
+    SSLCertificateFile    conf/certs/server.crt
+    SSLCertificateKeyFile conf/certs/server.key
     Protocols h3
 
-    H3CertificatePath    conf/certs/server.crt
-    H3CertificateKeyPath conf/certs/server.key
-    H3Port               8443
+    H3Port 8443
 </VirtualHost>
 ```
 
@@ -110,7 +110,7 @@ podman logs mod_http3_dev
 | Error | Cause | Fix |
 |---|---|---|
 | `Cannot load .../mod_http3.so` | Build failed | Check build output |
-| `Invalid command 'H3CertificatePath'` | Module not loaded | Verify LoadModule line |
+| `Invalid command 'H3Port'` | Module not loaded | Verify LoadModule line |
 | `Permission denied` | SELinux | Add `:Z` to volume mounts |
 | HTTP/3 not working but HTTP/2 is | UDP port not mapped | Check `podman port mod_http3_dev` |
 

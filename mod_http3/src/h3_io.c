@@ -133,10 +133,8 @@ apr_status_t h3_io_listen_start(apr_pool_t* pchild, server_rec* s, h3_server_con
 
     char qerr[H3Q_ERRLEN] = {0};
     h3q_config qcfg = {
-        .cert_path = conf->h3_cert_path,
-        .key_path = conf->h3_key_path,
+        .ssl_ctx = conf->ssl_ctx,
         .address_validation = (conf->h3_address_validation != H3_FLAG_OFF),
-        .session_tickets = (conf->h3_session_tickets != H3_FLAG_OFF),
     };
     io->qengine = h3q_engine_create(&qcfg, udp_fd, qerr, sizeof(qerr));
     if (!io->qengine)
@@ -271,6 +269,15 @@ static apr_status_t spawn_serviced_session(h3_io_t* io, h3q_conn* conn)
     }
     apr_allocator_owner_set(allocator, session_pool);
     apr_pool_tag(session_pool, "h3_session");
+    /* Workers allocate from stream subpools while this thread makes its own: share the allocator safely. */
+    apr_thread_mutex_t* alloc_mutex = NULL;
+    if (apr_thread_mutex_create(&alloc_mutex, APR_THREAD_MUTEX_DEFAULT, session_pool) != APR_SUCCESS)
+    {
+        apr_pool_destroy(session_pool);
+        h3q_conn_free(conn);
+        return APR_EGENERAL;
+    }
+    apr_allocator_mutex_set(allocator, alloc_mutex);
 
     h3_session* session = NULL;
     if (h3_session_create(&session, io->server, conn, session_pool) != APR_SUCCESS)
