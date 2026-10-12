@@ -3,6 +3,21 @@ mod_http3 changes
 Changes are listed most recent first.
 Security-related entries always appear at the top of their release block.
 
+v0.0.71 (2026-10-11)
+--------------------
+  *) Fixed an event-thread spin while a client holds its flow-control window
+     shut: a blocked stream is now blocked again each time nghttp3 offers it.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Fixed a graceful restart that never ended: a handshake still pending
+     when the child started to drain did not finish or time out, so the old
+     child kept its connection count and the port.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
+  *) Fixed a heap race that crashed the child: worker threads and the event
+     thread allocated from one session allocator that had no mutex.
+     [Alexander Gerasimov <codeguard gmail.com>]
+
 v0.0.70 (2026-09-06)
 --------------------
   *) SECURITY: Updated the httpd submodule so mpm_event tolerates a connection
